@@ -302,15 +302,17 @@ type
     TNode = TBinaryTreeBase<TPair<K, V>>.TNode;
   private
     class var fKeyComparer: IComparer<K>;
-    class function GetKeyComparer: IComparer<K>;
-    property KeyComparer: IComparer<K> read GetKeyComparer;
+    class function GetKeyComparer: IComparer<K>; static;
   protected
     function Equal(const a, b: K): boolean; overload; virtual;
     function Less(const a, b: K): boolean; overload; virtual;
-    function Pair(Key:K; Value: V): TPair<K,V>;
+    function Pair(Key:K; Value: V): TPair<K,V>; inline;
+    class property KeyComparer: IComparer<K> read GetKeyComparer;
   end;
 
-  TNAryTree<K, V> = class(TBinaryTreeBase<TPair<K, V>>)
+  TNAryTree<K, V> = class(TBinaryTreeBase<K, V>)
+  private type
+    TNode = TBinaryTreeBase<TPair<K,V>>.TNode;
   private
     /// <summary>
     /// Inserts a node into the subtree anchored at Start.
@@ -327,7 +329,6 @@ type
     ///
     /// Can lead to duplicate keys in the tree if not called with the Root as the Start</remarks>
     function InternalInsert(Head: TNode; const Key: K; const Value: V): TNode; overload; virtual;
-  protected
   public
     constructor Create; override;
     destructor Destroy; override;
@@ -455,9 +456,9 @@ type
 {$IFEND}
   public
     function Last: K; overload; override;
-    function Last(const Predicate: TPredicate<K>): K; overload; override;
-    function LastOrDefault(const DefaultValue: K): K; overload; override;
-    function LastOrDefault(const Predicate: TPredicate<K>; const DefaultValue: K): K; overload; override;
+    function Last(const Predicate: TPredicate<K>): K; overload;
+    function LastOrDefault(const DefaultValue: K): K; overload;
+    function LastOrDefault(const Predicate: TPredicate<K>; const DefaultValue: K): K; overload;
     function First: K; override;
     function Extract(const Key: K): K; override;
     function Remove(const Key: K): boolean; override;
@@ -533,6 +534,22 @@ type
     function ContainsValue(const value: V): Boolean;
 
     /// <summary>
+    ///   Determines whether the IMap&lt;TKey,TValue&gt; contains the specified
+    ///   key/value pair.
+    /// </summary>
+    /// <param name="key">
+    ///   The key of the pair to locate in the IMap&lt;TKey, TValue&gt;.
+    /// </param>
+    /// <param name="value">
+    ///   The value of the pair to locate in the IMap&lt;TKey, TValue&gt;.
+    /// </param>
+    /// <returns>
+    ///   <b>True</b> if the IMap&lt;TKey, TValue&gt; contains a pair with the
+    ///   specified key and value; otherwise <b>False</b>.
+    /// </returns>
+    function Contains(const key: K; const value: V): Boolean;
+
+    /// <summary>
     /// Removes the element with the specified key from the
     /// IDictionary&lt;K, V&gt;.
     /// </summary>
@@ -547,6 +564,32 @@ type
     function Remove(const key: K): Boolean; overload;
     function Remove(const key: K; const value: V): Boolean; overload;
 
+    function Extract(const key: K; const value: V): TPair<K,V>; overload;
+
+    /// <summary>
+    ///   Removes the value for a specified key without triggering lifetime
+    ///   management for objects.
+    /// </summary>
+    /// <param name="key">
+    ///   The key whose value to remove.
+    /// </param>
+    /// <returns>
+    ///   The removed value for the specified key if it existed; <b>default</b>
+    ///   otherwise.
+    /// </returns>
+    function Extract(const key: K): V; overload;
+
+    /// <summary>
+    ///   Removes the value for a specified key without triggering lifetime
+    ///   management for objects.
+    /// </summary>
+    /// <param name="key">
+    ///   The key whose value to remove.
+    /// </param>
+    /// <returns>
+    ///   The removed pair for the specified key if it existed; <b>default</b>
+    ///   otherwise.
+    /// </returns>
     function ExtractPair(const key: K): TPair<K, V>;
 
     /// <summary>
@@ -566,6 +609,18 @@ type
     /// <b>False</b>.
     /// </returns>
     function TryGetValue(const key: K; out value: V): Boolean;
+
+    /// <summary>
+    ///   Gets the value for a given key if a matching key exists in the
+    ///   dictionary; returns the default value otherwise.
+    /// </summary>
+    function GetValueOrDefault(const key: K): V; overload;
+
+    /// <summary>
+    ///   Gets the value for a given key if a matching key exists in the
+    ///   dictionary; returns the given default value otherwise.
+    /// </summary>
+    function GetValueOrDefault(const key: K; const defaultValue: V): V; overload;
 
     function AsReadOnlyDictionary: IReadOnlyDictionary<K, V>;
 
@@ -1177,6 +1232,11 @@ begin
     end);
 end;
 
+function TRedBlackTree<K, V>.Contains(const key: K; const value: V): Boolean;
+begin
+  Result := Assigned(FindNode(Root, TPair.Create(key, value)));
+end;
+
 constructor TRedBlackTree<K, V>.Create;
 begin
   inherited Create;
@@ -1184,6 +1244,11 @@ begin
   fKeyComparer:= TTreeComparer.Create;
   fOnKeyChanged:= TCollectionChangedEventImpl<K>.Create;
   fOnValueChanged:= TCollectionChangedEventImpl<V>.Create;
+end;
+
+function TRedBlackTree<K, V>.Extract(const key: K): V;
+begin
+  Result := ExtractPair(key).Value;
 end;
 
 function TRedBlackTree<K, V>.ExtractPair(const key: K): TPair<K, V>;
@@ -1271,6 +1336,11 @@ begin
   Result:= inherited Remove(Pair);
 end;
 
+function TRedBlackTree<K, V>.Extract(const key: K; const value: V): TPair<K,V>;
+begin
+  Result := TPair.Create(key, value);
+  inherited Remove(Result);
+end;
 
 procedure TRedBlackTree<K, V>.SetItem(const key: K; const value: V);
 var
@@ -1293,6 +1363,18 @@ begin
   Result:= Assigned(Node);
   if Result then Value:= Node.Key.Value;
   TObject.NewInstance
+end;
+
+function TRedBlackTree<K, V>.GetValueOrDefault(const key: K): V;
+begin
+  if not TryGetValue(key, Result) then
+    Result := default (V);
+end;
+
+function TRedBlackTree<K, V>.GetValueOrDefault(const key: K; const defaultValue: V): V;
+begin
+  if not TryGetValue(key, Result) then
+    Result := defaultValue;
 end;
 
 function TRedBlackTree<K, V>.Pair(Key: K; Value: V): TPair<K, V>;
@@ -1346,11 +1428,6 @@ begin
   Result:= Node.Key;
 end;
 
-function TNAryTree<K, V>.Pair(Key: K; Value: V): TPair<K, V>;
-begin
-  Result.Create(Key, Value);
-end;
-
 function TNAryTree<K, V>.GetDirectChildern(const ParentKey: K): TArray<TPair<K, V>>;
 var
   Node, Parent: TNode;
@@ -1386,22 +1463,6 @@ begin
   Result:= Head;
 end;
 
-
-function TNAryTree<K, V>.Equal(const a, b: K): boolean;
-begin
-  Result:= KeyComparer.Compare(a, b) = 0;
-end;
-
-function TNAryTree<K, V>.Less(const a, b: K): boolean;
-begin
-  Result:= KeyComparer.Compare(a, b) < 0;
-end;
-
-class function TNAryTree<K, V>.GetKeyComparer: IComparer<K>;
-begin
-  if not(Assigned(fKeyComparer)) then fKeyComparer:= TComparer<K>.Default;
-  Result:= fKeyComparer;
-end;
 
 {TTree<K>}
 
@@ -1491,4 +1552,29 @@ begin
   if not(Add(Item)) then raise Exception.Create('Cannot add a duplicate item in a tree');
 end;
 
+{ TBinaryTreeBase<K, V> }
+
+function TBinaryTreeBase<K, V>.Equal(const a, b: K): boolean;
+begin
+  Result:= TBinaryTreeBase<K,V>.KeyComparer.Compare(a, b) = 0;
+end;
+
+class function TBinaryTreeBase<K, V>.GetKeyComparer: IComparer<K>;
+begin
+  if not(Assigned(fKeyComparer)) then fKeyComparer:= TComparer<K>.Default;
+    Result:= fKeyComparer;
+end;
+
+function TBinaryTreeBase<K, V>.Less(const a, b: K): boolean;
+begin
+  Result:= TBinaryTreeBase<K,V>.KeyComparer.Compare(a, b) < 0;
+end;
+
+function TBinaryTreeBase<K, V>.Pair(Key: K; Value: V): TPair<K, V>;
+begin
+  Result := TPair<K,V>.Create(key, value);
+end;
+
 end.
+
+
