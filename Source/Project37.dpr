@@ -28,7 +28,14 @@ begin
   Assert(Tree.Last = 'ccc');
   Tree.Add('aa');
   Assert(Tree.First = 'aa');
+  Tree.Traverse(TraverseOrder.InOrder,
+    procedure (const key: string; var abort: boolean)
+    begin
+      Writeln(key);
+    end);
   Tree.Free;
+
+  Writeln;
 
   t1 := TRedBlackTree<integer,string>.Create;
   t1.Add(1, 'aaa');
@@ -40,5 +47,12 @@ begin
   Assert(Equals(t1.First, TPair<integer,string>.Create(0,'ZZZ')));
   Assert(t1.ContainsKey(2));
   Assert(t1[3] = 'ccc');
+  t1.Traverse(TraverseOrder.ReverseOrder,
+    procedure (const key: integer; const value: string; var abort: boolean)
+    begin
+      Writeln(key, ':', value);
+    end);
   t1.Free;
+
+  Readln;
 end.

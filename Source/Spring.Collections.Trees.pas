@@ -202,6 +202,10 @@ type
     function Overlaps(const other: IEnumerable<K>): Boolean; virtual;
   end;
 
+  {$SCOPEDENUMS ON}
+  TraverseOrder = (PreOrder, InOrder, ReverseOrder, PostOrder);
+  {$SCOPEDENUMS OFF}
+
   TBinaryTreeBase<K> = class(TTree<K>)
   private type
     // Nodes in the tree, because the parent is not stored, these are dump nodes.
@@ -261,6 +265,7 @@ type
     procedure TraversePreOrder(const Node: TNode; Action: TNodePredicate);
     procedure TraversePostOrder(const Node: TNode; Action: TNodePredicate);
     procedure TraverseInOrder(const Node: TNode; Action: TNodePredicate);
+    procedure TraverseReverseOrder(const Node: TNode; Action: TNodePredicate);
     /// <summary>
     /// Destroys a single Node and updates the count.
     /// Fixes the root if nessecary
@@ -290,11 +295,14 @@ type
     function InternalInsert(Head: TNode; const Key: K): TNode; virtual;
 
     property Root: TNode read fRoot;
+  public type
+    TTraverseAction = reference to procedure (const key: K; var abort: boolean);
   public
     function Add(const Item: K): boolean; override;
     function Contains(const Key: K): boolean; override;
     procedure Clear; reintroduce;
     property Count: integer read fCount;
+    procedure Traverse(order: TraverseOrder; const action: TTraverseAction);
   end;
 
   TBinaryTreeBase<K,V> = class(TBinaryTreeBase<TPair<K, V>>)
@@ -305,11 +313,15 @@ type
   private
     class var fKeyComparer: IComparer<K>;
     class function GetKeyComparer: IComparer<K>; static;
+  public type
+    TTraverseAction = reference to procedure (const key: K; const value: V; var abort: boolean);
   protected
     function Equal(const a, b: K): boolean; overload;
     function Less(const a, b: K): boolean; overload;
     function Pair(const Key: K; const Value: V): TPair; inline;
     class property KeyComparer: IComparer<K> read GetKeyComparer;
+  public
+    procedure Traverse(order: TraverseOrder; const action: TTraverseAction);
   end;
 
   TNAryTree<K, V> = class(TBinaryTreeBase<K, V>)
@@ -501,11 +513,13 @@ type
     property Comparer: IComparer<TPair> read GetComparer;
     function Pair(const Key:K; const Value: V): TPair;
 {$ENDREGION}
+  public type
+    TTraverseAction = reference to procedure (const key: K; const value: V; var abort: boolean);
   public
     constructor Create(Species: TTreeSpecies = TD234); reintroduce; overload;
     constructor Create(const comparer: IComparer<K>; Species: TTreeSpecies = TD234); reintroduce; overload;
     constructor Create(const comparer: TComparison<K>; Species: TTreeSpecies = TD234); reintroduce; overload;
-  public
+
     /// <summary>
     /// Adds an element with the provided key and value to the
     /// IDictionary&lt;K, V&gt;.
@@ -630,6 +644,8 @@ type
     function GetValueOrDefault(const key: K; const defaultValue: V): V; overload;
 
     function AsReadOnlyDictionary: IReadOnlyDictionary<K, V>;
+
+    procedure Traverse(order: TraverseOrder; const action: TTraverseAction);
 
     /// <summary>
     /// Gets or sets the element with the specified key.
@@ -1037,26 +1053,31 @@ end;
 
 procedure TBinaryTreeBase<K>.TraverseInOrder(const Node: TNode; Action: TNodePredicate);
 begin
-  if (Node = nil) then exit;
-  TraverseInOrder(Node.Left, Action);
+  if assigned(Node.Left) then TraverseInOrder(Node.Left, Action);
   if Action(Node) then exit;
-  TraverseInOrder(Node.Right, Action);
+  if assigned(Node.Right) then TraverseInOrder(Node.Right, Action);
+end;
+
+procedure TBinaryTreeBase<K>.TraverseReverseOrder(const Node: TNode; Action:
+  TNodePredicate);
+begin
+  if assigned(Node.Right) then TraverseReverseOrder(Node.Right, Action);
+  if Action(Node) then exit;
+  if assigned(Node.Left) then TraverseReverseOrder(Node.Left, Action);
 end;
 
 procedure TBinaryTreeBase<K>.TraversePostOrder(const Node: TNode; Action: TNodePredicate);
 begin
-  if (Node = nil) then exit;
-  TraversePostOrder(Node.Left, Action);
-  TraversePostOrder(Node.Right, Action);
+  if assigned(Node.Left) then TraversePostOrder(Node.Left, Action);
+  if assigned(Node.Right) then TraversePostOrder(Node.Right, Action);
   if Action(Node) then exit;
 end;
 
 procedure TBinaryTreeBase<K>.TraversePreOrder(const Node: TNode; Action: TNodePredicate);
 begin
-  if (Node = nil) then exit;
   if Action(Node) then exit;
-  TraversePreOrder(Node.Left, Action);
-  TraversePreOrder(Node.Right, Action);
+  if assigned(Node.Left) then TraversePreOrder(Node.Left, Action);
+  if assigned(Node.Right) then TraversePreOrder(Node.Right, Action);
 end;
 
 procedure TBinaryTreeBase<K>.Clear;
@@ -1420,6 +1441,30 @@ begin
   Result:= TPair.Create(Key, Value);
 end;
 
+procedure TRedBlackTree<K, V>.Traverse(order: TraverseOrder; const action:
+  TTraverseAction);
+var
+  actionWrapper: TNodePredicate;
+begin
+  actionWrapper :=
+    function (const node: TNode): boolean
+    var
+      abort: boolean;
+    begin
+      abort := false;
+      action(node.Key.Key, node.Key.Value, abort);
+      Result := abort;
+    end;
+
+  case order of
+    TraverseOrder.InOrder: TraverseInOrder(Root, actionWrapper);
+    TraverseOrder.PreOrder: TraversePreOrder(Root, actionWrapper);
+    TraverseOrder.PostOrder: TraversePostOrder(Root, actionWrapper);
+    TraverseOrder.ReverseOrder: TraverseReverseOrder(Root, actionWrapper);
+    else raise Exception.Create('Unsupported traverse order');
+  end;
+end;
+
 { TRedBlackTree<K, V>.TTreeComparer }
 
 constructor TRedBlackTree<K, V>.TTreeComparer.Create(const comparer: IComparer<K>);
@@ -1579,6 +1624,29 @@ begin
   Inc(fCount);
 end;
 
+procedure TBinaryTreeBase<K>.Traverse(order: TraverseOrder; const action:
+  TTraverseAction);
+var
+  actionWrapper: TNodePredicate;
+begin
+  actionWrapper :=
+    function (const node: TNode): boolean
+    var
+      abort: boolean;
+    begin
+      abort := false;
+      action(node.Key, abort);
+      Result := abort;
+    end;
+
+  case order of
+    TraverseOrder.PreOrder:  TraversePreOrder(Root, actionWrapper);
+    TraverseOrder.InOrder:   TraverseInOrder(Root, actionWrapper);
+    TraverseOrder.PostOrder: TraversePostOrder(Root, actionWrapper);
+    else raise Exception.Create('Unsupported traverse order');
+  end;
+end;
+
 procedure TTree<K>.ArgumentNilError(const MethodName: string);
 begin
   raise EArgumentNullException.Create(Self.ClassName + MethodName +
@@ -1611,6 +1679,29 @@ end;
 function TBinaryTreeBase<K, V>.Pair(const Key: K; const Value: V): TPair;
 begin
   Result := TPair.Create(key, value);
+end;
+
+procedure TBinaryTreeBase<K, V>.Traverse(order: TraverseOrder;
+  const action: TTraverseAction);
+var
+  actionWrapper: TNodePredicate;
+begin
+  actionWrapper :=
+    function (const node: TNode): boolean
+    var
+      abort: boolean;
+    begin
+      abort := false;
+      action(node.Key.Key, node.Key.Value, abort);
+      Result := abort;
+    end;
+
+  case order of
+    TraverseOrder.PreOrder:  TraversePreOrder(Root, actionWrapper);
+    TraverseOrder.InOrder:   TraverseInOrder(Root, actionWrapper);
+    TraverseOrder.PostOrder: TraversePostOrder(Root, actionWrapper);
+    else raise Exception.Create('Unsupported traverse order');
+  end;
 end;
 
 end.
