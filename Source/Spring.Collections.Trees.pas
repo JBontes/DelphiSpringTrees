@@ -298,15 +298,17 @@ type
   end;
 
   TBinaryTreeBase<K,V> = class(TBinaryTreeBase<TPair<K, V>>)
+  protected type
+    TPair = TPair<K,V>;
   private type
-    TNode = TBinaryTreeBase<TPair<K, V>>.TNode;
+    TNode = TBinaryTreeBase<TPair>.TNode;
   private
     class var fKeyComparer: IComparer<K>;
     class function GetKeyComparer: IComparer<K>; static;
   protected
-    function Equal(const a, b: K): boolean; overload; virtual;
-    function Less(const a, b: K): boolean; overload; virtual;
-    function Pair(Key:K; Value: V): TPair<K,V>; inline;
+    function Equal(const a, b: K): boolean; overload;
+    function Less(const a, b: K): boolean; overload;
+    function Pair(const Key: K; const Value: V): TPair; inline;
     class property KeyComparer: IComparer<K> read GetKeyComparer;
   end;
 
@@ -328,12 +330,12 @@ type
     /// Examine the Count property to see if a node was inserted.
     ///
     /// Can lead to duplicate keys in the tree if not called with the Root as the Start</remarks>
-    function InternalInsert(Head: TNode; const Key: K; const Value: V): TNode; overload; virtual;
+    function InternalInsert(Head: TNode; const Key: K; const Value: V): TNode; reintroduce; overload; virtual;
   public
     constructor Create; override;
     destructor Destroy; override;
     function Add(const Key: TPair<K,V>): boolean; overload; override;
-    procedure Add(const Key: K; const Value: V); overload; virtual;
+    procedure Add(const Key: K; const Value: V); reintroduce; overload; virtual;
     function Get(Key: K): TPair<K,V>;
     function GetDirectChildern(const ParentKey: K): TArray<TPair<K,V>>;
   end;
@@ -442,8 +444,11 @@ type
     function MaxNode(const Head: TNode): TNode;
   protected
   public
-    constructor Create; overload; override;
-    constructor Create(Species: TTreeSpecies); overload;
+    constructor Create(Species: TTreeSpecies = TD234); reintroduce; overload;
+    constructor Create(const comparer: IComparer<K>; Species: TTreeSpecies = TD234); reintroduce; overload;
+    constructor Create(const comparer: TComparison<K>; Species: TTreeSpecies = TD234); reintroduce; overload;
+    constructor Create(const values: array of K; Species: TTreeSpecies = TD234); reintroduce; overload;
+    constructor Create(const collection: IEnumerable<K>; Species: TTreeSpecies = TD234); reintroduce; overload;
     destructor Destroy; override;
     function GetEnumerator: IEnumerator<K>; override;
     function Reversed: IEnumerable<K>; override;
@@ -457,7 +462,7 @@ type
   public
     function Last: K; overload; override;
     function Last(const Predicate: TPredicate<K>): K; overload;
-    function LastOrDefault(const DefaultValue: K): K; overload;
+    function LastOrDefault(const DefaultValue: K): K; overload; override;
     function LastOrDefault(const Predicate: TPredicate<K>; const DefaultValue: K): K; overload;
     function First: K; override;
     function Extract(const Key: K): K; override;
@@ -474,12 +479,12 @@ type
     private
       fComparer: IComparer<K>;
     public
-      constructor Create;
+      constructor Create(const comparer: IComparer<K>);
       function Compare(const a, b: TPair): Integer;
     end;
   private
     fValueComparer: IComparer<V>;
-    fKeyComparer: IComparer<TPair<K, V>>;
+    fKeyComparer: IComparer<TPair>;
     fOnKeyChanged: ICollectionChangedEvent<K>;
     fOnValueChanged: ICollectionChangedEvent<V>;
   protected
@@ -492,12 +497,14 @@ type
     function GetValues: IReadOnlyCollection<V>;
     function GetValueType: PTypeInfo;
     procedure SetItem(const key: K; const value: V);
-    function GetComparer: IComparer<TPair<K, V>>;
-    property Comparer: IComparer<TPair<K, V>> read GetComparer;
-    function Pair(Key:K; Value: V): TPair<K,V>;
+    function GetComparer: IComparer<TPair>;
+    property Comparer: IComparer<TPair> read GetComparer;
+    function Pair(const Key:K; const Value: V): TPair;
 {$ENDREGION}
   public
-    constructor Create; override;
+    constructor Create(Species: TTreeSpecies = TD234); reintroduce; overload;
+    constructor Create(const comparer: IComparer<K>; Species: TTreeSpecies = TD234); reintroduce; overload;
+    constructor Create(const comparer: TComparison<K>; Species: TTreeSpecies = TD234); reintroduce; overload;
   public
     /// <summary>
     /// Adds an element with the provided key and value to the
@@ -547,7 +554,7 @@ type
     ///   <b>True</b> if the IMap&lt;TKey, TValue&gt; contains a pair with the
     ///   specified key and value; otherwise <b>False</b>.
     /// </returns>
-    function Contains(const key: K; const value: V): Boolean;
+    function Contains(const key: K; const value: V): Boolean; reintroduce;
 
     /// <summary>
     /// Removes the element with the specified key from the
@@ -561,10 +568,10 @@ type
     /// <b>False</b>. This method also returns <b>False</b> if <i>key</i> was
     /// not found in the original IDictionary&lt;K, V&gt;.
     /// </returns>
-    function Remove(const key: K): Boolean; overload;
-    function Remove(const key: K; const value: V): Boolean; overload;
+    function Remove(const key: K): Boolean; reintroduce; overload;
+    function Remove(const key: K; const value: V): Boolean; reintroduce; overload;
 
-    function Extract(const key: K; const value: V): TPair<K,V>; overload;
+    function Extract(const key: K; const value: V): TPair; reintroduce; overload;
 
     /// <summary>
     ///   Removes the value for a specified key without triggering lifetime
@@ -577,7 +584,7 @@ type
     ///   The removed value for the specified key if it existed; <b>default</b>
     ///   otherwise.
     /// </returns>
-    function Extract(const key: K): V; overload;
+    function Extract(const key: K): V; reintroduce; overload;
 
     /// <summary>
     ///   Removes the value for a specified key without triggering lifetime
@@ -590,7 +597,7 @@ type
     ///   The removed pair for the specified key if it existed; <b>default</b>
     ///   otherwise.
     /// </returns>
-    function ExtractPair(const key: K): TPair<K, V>;
+    function ExtractPair(const key: K): TPair;
 
     /// <summary>
     /// Gets the value associated with the specified key.
@@ -680,9 +687,30 @@ begin
   fSpecies:= Species;
 end;
 
-constructor TRedBlackTree<K>.Create;
+constructor TRedBlackTree<K>.Create(const comparer: TComparison<K>;
+  Species: TTreeSpecies);
 begin
-  Create(BU23);
+  inherited Create(comparer);
+  fSpecies := Species;
+end;
+
+constructor TRedBlackTree<K>.Create(const comparer: IComparer<K>; Species: TTreeSpecies);
+begin
+  inherited Create(comparer);
+  fSpecies := Species;
+end;
+
+constructor TRedBlackTree<K>.Create(const collection: IEnumerable<K>;
+  Species: TTreeSpecies);
+begin
+  Create(Species);
+  AddRange(collection);
+end;
+
+constructor TRedBlackTree<K>.Create(const values: array of K; Species: TTreeSpecies);
+begin
+  Create(Species);
+  AddRange(values);
 end;
 
 constructor TBinaryTreeBase<K>.TNode.Create(const Key: K);
@@ -1189,6 +1217,25 @@ end;
 
 { TRedBlackTree<K, V> }
 
+constructor TRedBlackTree<K, V>.Create(const comparer: IComparer<K>; Species: TTreeSpecies);
+begin
+  fKeyComparer := TTreeComparer.Create(comparer);
+  inherited Create(fKeyComparer);
+  fValueComparer:= TComparer<V>.Default;
+  fOnKeyChanged:= TCollectionChangedEventImpl<K>.Create;
+  fOnValueChanged:= TCollectionChangedEventImpl<V>.Create;
+end;
+
+constructor TRedBlackTree<K, V>.Create(Species: TTreeSpecies);
+begin
+  Create(TComparer<K>.Default);
+end;
+
+constructor TRedBlackTree<K, V>.Create(const comparer: TComparison<K>; Species: TTreeSpecies);
+begin
+  Create(IComparer<K>(PPointer(@comparer)^));
+end;
+
 procedure TRedBlackTree<K, V>.Add(const key: K; const value: V);
 var
   Pair: TPair;
@@ -1237,15 +1284,6 @@ begin
   Result := Assigned(FindNode(Root, TPair.Create(key, value)));
 end;
 
-constructor TRedBlackTree<K, V>.Create;
-begin
-  inherited Create;
-  fValueComparer:= TComparer<V>.Default;
-  fKeyComparer:= TTreeComparer.Create;
-  fOnKeyChanged:= TCollectionChangedEventImpl<K>.Create;
-  fOnValueChanged:= TCollectionChangedEventImpl<V>.Create;
-end;
-
 function TRedBlackTree<K, V>.Extract(const key: K): V;
 begin
   Result := ExtractPair(key).Value;
@@ -1262,7 +1300,7 @@ begin
   else raise EInvalidOperationException.CreateRes(@SSequenceContainsNoMatchingElement);
 end;
 
-function TRedBlackTree<K, V>.GetComparer: IComparer<TPair<K, V>>;
+function TRedBlackTree<K, V>.GetComparer: IComparer<TPair>;
 begin
   Result:= fKeyComparer;
 end;
@@ -1377,17 +1415,17 @@ begin
     Result := defaultValue;
 end;
 
-function TRedBlackTree<K, V>.Pair(Key: K; Value: V): TPair<K, V>;
+function TRedBlackTree<K, V>.Pair(const Key: K; const Value: V): TPair;
 begin
   Result:= TPair.Create(Key, Value);
 end;
 
 { TRedBlackTree<K, V>.TTreeComparer }
 
-constructor TRedBlackTree<K, V>.TTreeComparer.Create;
+constructor TRedBlackTree<K, V>.TTreeComparer.Create(const comparer: IComparer<K>);
 begin
   inherited Create;
-  fComparer:= TComparer<K>.Default;
+  fComparer:= comparer;
 end;
 
 function TRedBlackTree<K, V>.TTreeComparer.Compare(const a, b: TPair<K, V>): Integer;
@@ -1556,7 +1594,7 @@ end;
 
 function TBinaryTreeBase<K, V>.Equal(const a, b: K): boolean;
 begin
-  Result:= TBinaryTreeBase<K,V>.KeyComparer.Compare(a, b) = 0;
+  Result:= KeyComparer.Compare(a, b) = 0;
 end;
 
 class function TBinaryTreeBase<K, V>.GetKeyComparer: IComparer<K>;
@@ -1567,12 +1605,12 @@ end;
 
 function TBinaryTreeBase<K, V>.Less(const a, b: K): boolean;
 begin
-  Result:= TBinaryTreeBase<K,V>.KeyComparer.Compare(a, b) < 0;
+  Result:= KeyComparer.Compare(a, b) < 0;
 end;
 
-function TBinaryTreeBase<K, V>.Pair(Key: K; Value: V): TPair<K, V>;
+function TBinaryTreeBase<K, V>.Pair(const Key: K; const Value: V): TPair;
 begin
-  Result := TPair<K,V>.Create(key, value);
+  Result := TPair.Create(key, value);
 end;
 
 end.
