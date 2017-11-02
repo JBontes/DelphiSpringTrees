@@ -206,14 +206,14 @@ type
   TraverseOrder = (PreOrder, InOrder, ReverseOrder, PostOrder);
   {$SCOPEDENUMS OFF}
 
-  TBinaryTreeBase<K> = class(TTree<K>)
+  TBinaryTreeBase<T> = class(TTree<T>)
   private type
     // Nodes in the tree, because the parent is not stored, these are dump nodes.
     TNode = class
     protected
       fLeft: TNode; // Left nodes hold lower values
       fRight: TNode; // Right nodes hold higher values
-      fKey: K; // The payload, use a TPair<X,Y> to store a Key/Value pair.
+      fKey: T; // The payload, use a TPair<T,V> to store a Key/Value pair.
       fIsBlack: boolean; // Red is the default.
 
       /// <summary>
@@ -223,19 +223,18 @@ type
       /// <returns>false if self is nil.</returns>
       function IsRed: boolean; inline;
     public
-      constructor Create(const Key: K);
+      constructor Create(const Key: T);
     public
       property Left: TNode read fLeft write fLeft;
       property Right: TNode read fRight write fRight;
-      property Key: K read fKey write fKey;
+      property Key: T read fKey write fKey;
       property NodeColor: boolean read fIsBlack write fIsBlack;
     end;
   private type
     /// <summary>
     /// Enumerator for the trees, works on Nodes, not values.
-    /// Depends on an altered TIterator with a virtual GetCurrent Method.
     /// </summary>
-    TTreeEnumerator = class(TIterator<K>)
+    TTreeEnumerator = class(TIterator<T>)
     private
       fHead: TNode;
       fCurrentNode: TNode;
@@ -244,17 +243,16 @@ type
       fDirection: TDirection;
     protected
       // function GetCurrentNonGeneric: V; override;
-      function Clone: TIterator<K>; override;
+      function Clone: TIterator<T>; override;
     public
       constructor Create(const Head: TNode; Direction: TDirection); overload;
       constructor Create(const Head: TNode); overload;
+      destructor Destroy; override;
       procedure Reset; override;
       function MoveNext: Boolean; override;
-      // function GetEnumerator: IEnumerator<K>; override;
-      destructor Destroy; override;
-      // The parent TIterator must be altered to have a virtual GetCurrent method.
-      function GetCurrent: K;
-      property Current: K read GetCurrent;
+      // function GetEnumerator: IEnumerator<T>; override;
+      //function GetCurrent: T;
+      property Current: T read GetCurrent;
       property CurrentNode: TNode read fCurrentNode;
     end;
   private type
@@ -277,29 +275,29 @@ type
     /// <summary>
     /// Convienance method to see if two keys are equal.
     /// </summary>
-    function Equal(const a, b: K): boolean; inline;
+    function Equal(const a, b: T): boolean; inline;
     /// <summary>
     /// Convienance method to see if (a < b).
     /// </summary>
-    function Less(const a, b: K): Boolean; inline;
+    function Less(const a, b: T): Boolean; inline;
     /// <summary>
     /// Finds the node containing the key in the given subtree.
     /// </summary>
     /// <param name="Head">The head of the subtree</param>
     /// <param name="Key">The key to look for</param>
     /// <returns>nil if the key is not found in the subtree; the containing node otherwise</returns>
-    function FindNode(const Head: TNode; const Key: K): TNode;
+    function FindNode(const Head: TNode; const Key: T): TNode;
 
-    function NewNode(const Key: K): TNode; inline;
+    function NewNode(const Key: T): TNode; inline;
 
-    function InternalInsert(Head: TNode; const Key: K): TNode; virtual;
+    function InternalInsert(Head: TNode; const Key: T): TNode; virtual;
 
     property Root: TNode read fRoot;
   public type
-    TTraverseAction = reference to procedure (const key: K; var abort: boolean);
+    TTraverseAction = reference to procedure (const key: T; var abort: boolean);
   public
-    function Add(const Item: K): boolean; override;
-    function Contains(const Key: K): boolean; override;
+    function Add(const Item: T): boolean; override;
+    function Contains(const Key: T): boolean; override;
     procedure Clear; reintroduce;
     property Count: integer read fCount;
     procedure Traverse(order: TraverseOrder; const action: TTraverseAction);
@@ -341,7 +339,7 @@ type
     /// the Start node as its result; doing nothing else.
     /// Examine the Count property to see if a node was inserted.
     ///
-    /// Can lead to duplicate keys in the tree if not called with the Root as the Start</remarks>
+    /// Can lead to duplicate keys in the tree if not called with the Root as the Head</remarks>
     function InternalInsert(Head: TNode; const Key: K; const Value: V): TNode; reintroduce; overload; virtual;
   public
     constructor Create; override;
@@ -356,10 +354,10 @@ type
   /// Left Leaning red black tree, mainly useful for encapsulating a Set.
   /// Does not allow duplicate items.
   /// </summary>
-  TRedBlackTree<K> = class(TBinaryTreeBase<K>)
+  TRedBlackTree<T> = class(TBinaryTreeBase<T>)
   private type
-    TNode = TBinaryTreeBase<K>.TNode;
-    TNodePredicate = TBinaryTreeBase<K>.TNodePredicate;
+    TNode = TBinaryTreeBase<T>.TNode;
+    TNodePredicate = TBinaryTreeBase<T>.TNodePredicate;
   private
     // A RedBlack tree emulates a binary 234 tree.
     // This tree can run in 234 and 23 mode.
@@ -369,9 +367,9 @@ type
 {$IF defined(debug)}
   private // Test methods
     function Is234(Node: TNode): boolean; overload; virtual;
-    function IsBST(Node: TNode; MinKey, MaxKey: K): boolean; overload; virtual;
+    function IsBST(Node: TNode; MinKey, MaxKey: T): boolean; overload; virtual;
     function IsBalanced(Node: TNode; Black: integer): boolean; overload; virtual;
-{$IFEND}
+{$ENDIF}
   private
     /// <summary>
     /// Deletes the rightmost child of Start node, retaining the RedBlack property
@@ -394,7 +392,7 @@ type
     /// the Start node as its result.
     /// Examine the Count property to see if a node was deleted.
     /// </remarks>
-    function DeleteNode(Head: TNode; Key: K): TNode; overload;
+    function DeleteNode(Head: TNode; Key: T): TNode; overload;
 
     /// <summary>
     /// Inserts a node into the subtree anchored at Start.
@@ -410,7 +408,7 @@ type
     /// Examine the Count property to see if a node was inserted.
     ///
     /// Can lead to duplicate keys in the tree if not called with the Root as the Start</remarks>
-    function InternalInsert(Head: TNode; const Key: K): TNode; override;
+    function InternalInsert(Head: TNode; const Key: T): TNode; override;
 
     /// <summary>
     /// Corrects the RedBlackness of a node and its immediate childern after insertion or deletion.
@@ -457,30 +455,30 @@ type
   protected
   public
     constructor Create(Species: TTreeSpecies = TD234); reintroduce; overload;
-    constructor Create(const comparer: IComparer<K>; Species: TTreeSpecies = TD234); reintroduce; overload;
-    constructor Create(const comparer: TComparison<K>; Species: TTreeSpecies = TD234); reintroduce; overload;
-    constructor Create(const values: array of K; Species: TTreeSpecies = TD234); reintroduce; overload;
-    constructor Create(const collection: IEnumerable<K>; Species: TTreeSpecies = TD234); reintroduce; overload;
+    constructor Create(const comparer: IComparer<T>; Species: TTreeSpecies = TD234); reintroduce; overload;
+    constructor Create(const comparer: TComparison<T>; Species: TTreeSpecies = TD234); reintroduce; overload;
+    constructor Create(const values: array of T; Species: TTreeSpecies = TD234); reintroduce; overload;
+    constructor Create(const collection: IEnumerable<T>; Species: TTreeSpecies = TD234); reintroduce; overload;
     destructor Destroy; override;
-    function GetEnumerator: IEnumerator<K>; override;
-    function Reversed: IEnumerable<K>; override;
+    function GetEnumerator: IEnumerator<T>; override;
+    function Reversed: IEnumerable<T>; override;
 {$IF defined(Debug)}
   public // Test Methods
     function Is234: boolean; overload;
     function IsBST: boolean; overload;
     function IsBalanced: boolean; overload;
     function Check: boolean;
-{$IFEND}
+{$ENDIF}
   public
-    function Last: K; overload; override;
-    function Last(const Predicate: TPredicate<K>): K; overload;
-    function LastOrDefault(const DefaultValue: K): K; overload; override;
-    function LastOrDefault(const Predicate: TPredicate<K>; const DefaultValue: K): K; overload;
-    function First: K; override;
-    function Extract(const Key: K): K; override;
-    function Remove(const Key: K): boolean; override;
-    function Add(const Key: K): boolean; override;
-    function Get(const Key: K): K; overload;
+    function Last: T; overload; override;
+    function Last(const Predicate: TPredicate<T>): T; overload;
+    function LastOrDefault(const DefaultValue: T): T; overload; override;
+    function LastOrDefault(const Predicate: TPredicate<T>; const DefaultValue: T): T; overload;
+    function First: T; override;
+    function Extract(const Key: T): T; override;
+    function Remove(const Key: T): boolean; override;
+    function Add(const Key: T): boolean; override;
+    function Get(const Key: T): T; overload;
   end;
 
   TRedBlackTree<K, V> = class(TRedBlackTree<TPair<K, V>>, IDictionary<K, V>)
@@ -697,51 +695,51 @@ uses
   Spring.Collections.Events;
 
 
-constructor TRedBlackTree<K>.Create(Species: TTreeSpecies);
+constructor TRedBlackTree<T>.Create(Species: TTreeSpecies);
 begin
   inherited Create;
   fSpecies:= Species;
 end;
 
-constructor TRedBlackTree<K>.Create(const comparer: TComparison<K>;
+constructor TRedBlackTree<T>.Create(const comparer: TComparison<T>;
   Species: TTreeSpecies);
 begin
   inherited Create(comparer);
   fSpecies := Species;
 end;
 
-constructor TRedBlackTree<K>.Create(const comparer: IComparer<K>; Species: TTreeSpecies);
+constructor TRedBlackTree<T>.Create(const comparer: IComparer<T>; Species: TTreeSpecies);
 begin
   inherited Create(comparer);
   fSpecies := Species;
 end;
 
-constructor TRedBlackTree<K>.Create(const collection: IEnumerable<K>;
+constructor TRedBlackTree<T>.Create(const collection: IEnumerable<T>;
   Species: TTreeSpecies);
 begin
   Create(Species);
   AddRange(collection);
 end;
 
-constructor TRedBlackTree<K>.Create(const values: array of K; Species: TTreeSpecies);
+constructor TRedBlackTree<T>.Create(const values: array of T; Species: TTreeSpecies);
 begin
   Create(Species);
   AddRange(values);
 end;
 
-constructor TBinaryTreeBase<K>.TNode.Create(const Key: K);
+constructor TBinaryTreeBase<T>.TNode.Create(const Key: T);
 begin
   inherited Create;
   fKey:= Key;
   fIsBlack:= Color.Red;
 end;
 
-function TBinaryTreeBase<K>.Contains(const Key: K): boolean;
+function TBinaryTreeBase<T>.Contains(const Key: T): boolean;
 begin
   Result:= Assigned(FindNode(Root, Key));
 end;
 
-function TRedBlackTree<K>.Get(const Key: K): K;
+function TRedBlackTree<T>.Get(const Key: T): T;
 var
   Node: TNode;
 begin
@@ -750,7 +748,7 @@ begin
   else raise EInvalidOperationException.CreateRes(@SSequenceContainsNoMatchingElement);
 end;
 
-function TBinaryTreeBase<K>.Add(const Item: K): boolean;
+function TBinaryTreeBase<T>.Add(const Item: T): boolean;
 var
   OldCount: integer;
 begin
@@ -759,12 +757,12 @@ begin
   Result:= (Count <> OldCount);
 end;
 
-function TRedBlackTree<K>.GetEnumerator: IEnumerator<K>;
+function TRedBlackTree<T>.GetEnumerator: IEnumerator<T>;
 begin
   Result:= TTreeEnumerator.Create(Root);
 end;
 
-function TBinaryTreeBase<K>.FindNode(const Head: TNode; const Key: K): TNode;
+function TBinaryTreeBase<T>.FindNode(const Head: TNode; const Key: T): TNode;
 begin
   Result:= Head;
   while Result <> nil do begin
@@ -774,7 +772,7 @@ begin
   end;
 end;
 
-function TBinaryTreeBase<K>.InternalInsert(Head: TNode; const Key: K): TNode;
+function TBinaryTreeBase<T>.InternalInsert(Head: TNode; const Key: T): TNode;
 begin
   if Head = nil then begin
     Exit(NewNode(Key));
@@ -788,33 +786,33 @@ begin
 end;
 
 
-function TRedBlackTree<K>.First: K;
+function TRedBlackTree<T>.First: T;
 begin
   if (Root = nil) then raise EInvalidOperationException.CreateRes(@SSequenceContainsNoElements);
   Result:= MinNode(Root).Key;
 end;
 
-function TRedBlackTree<K>.MinNode(const Head: TNode): TNode;
+function TRedBlackTree<T>.MinNode(const Head: TNode): TNode;
 begin
   Assert(Head <> nil);
   Result:= Head;
   while Result.Left <> nil do Result:= Result.Left;
 end;
 
-function TRedBlackTree<K>.MaxNode(const Head: TNode): TNode;
+function TRedBlackTree<T>.MaxNode(const Head: TNode): TNode;
 begin
   Assert(Head <> nil);
   Result:= Head;
   while Result.Right <> nil do Result:= Result.Right;
 end;
 
-function TBinaryTreeBase<K>.TNode.IsRed: boolean;
+function TBinaryTreeBase<T>.TNode.IsRed: boolean;
 begin
   if Self = nil then Exit(false);
   Result:= (NodeColor = Color.Red);
 end;
 
-function TRedBlackTree<K>.Add(const Key: K): boolean;
+function TRedBlackTree<T>.Add(const Key: T): boolean;
 var
   OldCount: integer;
 begin
@@ -825,7 +823,7 @@ begin
   Result:= (Count <> OldCount);
 end;
 
-function TRedBlackTree<K>.InternalInsert(Head: TNode; const Key: K): TNode;
+function TRedBlackTree<T>.InternalInsert(Head: TNode; const Key: T): TNode;
 begin
   if Head = nil then begin
     Exit(NewNode(Key));
@@ -851,7 +849,7 @@ begin
   Result:= Head;
 end;
 
-function TRedBlackTree<K>.DeleteMin(Head: TNode): TNode;
+function TRedBlackTree<T>.DeleteMin(Head: TNode): TNode;
 begin
   if (Head.Left = nil) then begin
     FreeSingleNode(Head);
@@ -862,13 +860,13 @@ begin
   Result:= FixUp(Head);
 end;
 
-destructor TRedBlackTree<K>.Destroy;
+destructor TRedBlackTree<T>.Destroy;
 begin
   Clear;
   inherited Destroy;
 end;
 
-function TRedBlackTree<K>.DeleteMax(Head: TNode): TNode;
+function TRedBlackTree<T>.DeleteMax(Head: TNode): TNode;
 begin
   if (Head.Left.IsRed) then Head:= RotateRight(Head);
   if Head.Right = nil then begin
@@ -880,7 +878,7 @@ begin
   Result:= FixUp(Head);
 end;
 
-function TRedBlackTree<K>.Remove(const Key: K): boolean;
+function TRedBlackTree<T>.Remove(const Key: T): boolean;
 var
   OldCount: integer;
 begin
@@ -890,12 +888,12 @@ begin
   Result:= (Count <> OldCount);
 end;
 
-function TRedBlackTree<K>.Reversed: IEnumerable<K>;
+function TRedBlackTree<T>.Reversed: IEnumerable<T>;
 begin
   Result:= TTreeEnumerator.Create(Root, FromEnd);
 end;
 
-function TRedBlackTree<K>.DeleteNode(Head: TNode; Key: K): TNode;
+function TRedBlackTree<T>.DeleteNode(Head: TNode; Key: T): TNode;
 begin
   if Less(Key, Head.Key) then begin
     if not(Head.Left.IsRed) and not(Head.Left.Left.IsRed) then Head:= MoveRedLeft(Head);
@@ -916,15 +914,15 @@ begin
   Result:= FixUp(Head);
 end;
 
-function TRedBlackTree<K>.Last: K;
+function TRedBlackTree<T>.Last: T;
 begin
   if (Root = nil) then raise EInvalidOperationException.CreateRes(@SSequenceContainsNoElements);
   Result:= MaxNode(Root).Key;
 end;
 
-function TRedBlackTree<K>.Last(const Predicate: TPredicate<K>): K;
+function TRedBlackTree<T>.Last(const Predicate: TPredicate<T>): T;
 var
-  Item: K;
+  Item: T;
 begin
   for Item in Reversed do begin
     if Predicate(Item) then Exit(Item);
@@ -932,15 +930,15 @@ begin
   raise EInvalidOperationException.CreateRes(@SSequenceContainsNoMatchingElement);
 end;
 
-function TRedBlackTree<K>.LastOrDefault(const DefaultValue: K): K;
+function TRedBlackTree<T>.LastOrDefault(const DefaultValue: T): T;
 begin
   if (Root = nil) then Exit(DefaultValue);
   Result:= MaxNode(Root).Key;
 end;
 
-function TRedBlackTree<K>.LastOrDefault(const Predicate: TPredicate<K>; const DefaultValue: K): K;
+function TRedBlackTree<T>.LastOrDefault(const Predicate: TPredicate<T>; const DefaultValue: T): T;
 var
-  Item: K;
+  Item: T;
 begin
   for Item in Reversed do begin
     if Predicate(Item) then Exit(Item);
@@ -948,17 +946,17 @@ begin
   Result:= DefaultValue;
 end;
 
-function TBinaryTreeBase<K>.Less(const a, b: K): Boolean;
+function TBinaryTreeBase<T>.Less(const a, b: T): Boolean;
 begin
   Result:= Comparer.Compare(a, b) < 0;
 end;
 
-function TBinaryTreeBase<K>.Equal(const a, b: K): boolean;
+function TBinaryTreeBase<T>.Equal(const a, b: T): boolean;
 begin
   Result:= Comparer.Compare(a, b) = 0;
 end;
 
-function TRedBlackTree<K>.Extract(const Key: K): K;
+function TRedBlackTree<T>.Extract(const Key: T): T;
 var
   Node: TNode;
 begin
@@ -967,14 +965,14 @@ begin
   Remove(Key);
 end;
 
-procedure TRedBlackTree<K>.ColorFlip(const Node: TNode);
+procedure TRedBlackTree<T>.ColorFlip(const Node: TNode);
 begin
   Node.NodeColor:= not(Node.NodeColor);
   if Node.Left <> nil then Node.Left.NodeColor:= not(Node.Left.NodeColor);
   if Node.Right <> nil then Node.Right.NodeColor:= not(Node.Right.NodeColor);
 end;
 
-function TRedBlackTree<K>.RotateLeft(Node: TNode): TNode;
+function TRedBlackTree<T>.RotateLeft(Node: TNode): TNode;
 var
   x: TNode;
 begin
@@ -987,7 +985,7 @@ begin
   Result:= x;
 end;
 
-function TRedBlackTree<K>.RotateRight(Node: TNode): TNode;
+function TRedBlackTree<T>.RotateRight(Node: TNode): TNode;
 var
   x: TNode;
 begin
@@ -1000,7 +998,7 @@ begin
   Result:= x;
 end;
 
-function TRedBlackTree<K>.MoveRedLeft(Node: TNode): TNode;
+function TRedBlackTree<T>.MoveRedLeft(Node: TNode): TNode;
 begin
   // Assuming that node is red and both node.left and node.left.left
   // are black, make node.left or one of its children red.
@@ -1016,7 +1014,7 @@ begin
   Result:= Node;
 end;
 
-function TRedBlackTree<K>.MoveRedRight(Node: TNode): TNode;
+function TRedBlackTree<T>.MoveRedRight(Node: TNode): TNode;
 begin
   // Assuming that node is red and both node.right and node.right.left
   // are black, make node.right or one of its children red.
@@ -1030,7 +1028,7 @@ end;
 
 
 
-function TRedBlackTree<K>.FixUp(Node: TNode): TNode;
+function TRedBlackTree<T>.FixUp(Node: TNode): TNode;
 begin
   if ((Node.Right.IsRed)) then begin
     if (fSpecies = TD234) and ((Node.Right.Left.IsRed)) then Node.Right:= RotateRight(Node.Right);
@@ -1044,21 +1042,21 @@ begin
   Result:= Node;
 end;
 
-procedure TBinaryTreeBase<K>.FreeSingleNode(Node: TNode);
+procedure TBinaryTreeBase<T>.FreeSingleNode(Node: TNode);
 begin
   Assert(Node <> nil);
   Dec(fCount);
   Node.Free;
 end;
 
-procedure TBinaryTreeBase<K>.TraverseInOrder(const Node: TNode; Action: TNodePredicate);
+procedure TBinaryTreeBase<T>.TraverseInOrder(const Node: TNode; Action: TNodePredicate);
 begin
   if assigned(Node.Left) then TraverseInOrder(Node.Left, Action);
   if Action(Node) then exit;
   if assigned(Node.Right) then TraverseInOrder(Node.Right, Action);
 end;
 
-procedure TBinaryTreeBase<K>.TraverseReverseOrder(const Node: TNode; Action:
+procedure TBinaryTreeBase<T>.TraverseReverseOrder(const Node: TNode; Action:
   TNodePredicate);
 begin
   if assigned(Node.Right) then TraverseReverseOrder(Node.Right, Action);
@@ -1066,21 +1064,21 @@ begin
   if assigned(Node.Left) then TraverseReverseOrder(Node.Left, Action);
 end;
 
-procedure TBinaryTreeBase<K>.TraversePostOrder(const Node: TNode; Action: TNodePredicate);
+procedure TBinaryTreeBase<T>.TraversePostOrder(const Node: TNode; Action: TNodePredicate);
 begin
   if assigned(Node.Left) then TraversePostOrder(Node.Left, Action);
   if assigned(Node.Right) then TraversePostOrder(Node.Right, Action);
   if Action(Node) then exit;
 end;
 
-procedure TBinaryTreeBase<K>.TraversePreOrder(const Node: TNode; Action: TNodePredicate);
+procedure TBinaryTreeBase<T>.TraversePreOrder(const Node: TNode; Action: TNodePredicate);
 begin
   if Action(Node) then exit;
   if assigned(Node.Left) then TraversePreOrder(Node.Left, Action);
   if assigned(Node.Right) then TraversePreOrder(Node.Right, Action);
 end;
 
-procedure TBinaryTreeBase<K>.Clear;
+procedure TBinaryTreeBase<T>.Clear;
 begin
   TraversePostOrder(Root,
     function(const Node: TNode): boolean
@@ -1094,20 +1092,20 @@ end;
 
 {$IF defined(debug)}
 
-function TRedBlackTree<K>.Check: boolean;
+function TRedBlackTree<T>.Check: boolean;
 begin
   // Is this tree a red-black tree?
   Result:= isBST and Is234 and IsBalanced;
 end;
 
-function TRedBlackTree<K>.IsBST: boolean;
+function TRedBlackTree<T>.IsBST: boolean;
 begin
   // Is this tree a BST?
   if (Root = nil) then exit(true);
   Result:= IsBST(Root, First, Last);
 end;
 
-function TRedBlackTree<K>.IsBST(Node: TNode; MinKey, MaxKey: K): boolean;
+function TRedBlackTree<T>.IsBST(Node: TNode; MinKey, MaxKey: T): boolean;
 begin
   // Are all the values in the BST rooted at x between min and max,
   // and does the same property hold for both subtrees?
@@ -1116,12 +1114,12 @@ begin
   Result:= IsBST(Node.Left, MinKey, Node.key) and IsBST(Node.Right, Node.key, MaxKey);
 end;
 
-function TRedBlackTree<K>.Is234: boolean;
+function TRedBlackTree<T>.Is234: boolean;
 begin
   Result:= Is234(Root);
 end;
 
-function TRedBlackTree<K>.Is234(Node: TNode): boolean;
+function TRedBlackTree<T>.Is234(Node: TNode): boolean;
 begin
   if (Node = nil) then Exit(true);
   if ((Node.Right.IsRed)) then Exit((fspecies = TD234) and (Node.Left.IsRed));
@@ -1129,7 +1127,7 @@ begin
   Result:= Is234(Node.Left) and Is234(Node.Right);
 end;
 
-function TRedBlackTree<K>.IsBalanced: boolean;
+function TRedBlackTree<T>.IsBalanced: boolean;
 var
   x: TNode;
   BlackCount: Integer;
@@ -1144,7 +1142,7 @@ begin
   Result:= IsBalanced(Root, blackCount);
 end;
 
-function TRedBlackTree<K>.IsBalanced(Node: TNode; Black: integer): boolean;
+function TRedBlackTree<T>.IsBalanced(Node: TNode; Black: integer): boolean;
 begin
   // Does every path from the root to a leaf have the given number
   // of black links?
@@ -1156,7 +1154,7 @@ end;
 {$ENDIF}
 { TRedBlackTree<K>.TreeEnumerator }
 
-constructor TBinaryTreeBase<K>.TTreeEnumerator.Create(const Head: TNode; Direction: TDirection);
+constructor TBinaryTreeBase<T>.TTreeEnumerator.Create(const Head: TNode; Direction: TDirection);
 begin
   inherited Create;
   fHead:= Head;
@@ -1164,29 +1162,24 @@ begin
   fDirection:= Direction;
 end;
 
-function TBinaryTreeBase<K>.TTreeEnumerator.Clone: TIterator<K>;
+function TBinaryTreeBase<T>.TTreeEnumerator.Clone: TIterator<T>;
 begin
   Result:= TTreeEnumerator.Create(self.fHead, Self.fDirection);
 end;
 
-constructor TBinaryTreeBase<K>.TTreeEnumerator.Create(const Head: TNode);
+constructor TBinaryTreeBase<T>.TTreeEnumerator.Create(const Head: TNode);
 begin
   Create(Head, FromBeginning);
 end;
 
-destructor TBinaryTreeBase<K>.TTreeEnumerator.Destroy;
+destructor TBinaryTreeBase<T>.TTreeEnumerator.Destroy;
 begin
-  // fStack.Free;
+  // fStack.Free; //stack is a record, does not need to be freed.
   inherited;
 end;
 
-function TBinaryTreeBase<K>.TTreeEnumerator.GetCurrent: K;
-begin
-  Assert(Assigned(fCurrentNode));
-  Result:= fCurrentNode.Key;
-end;
 
-function TBinaryTreeBase<K>.TTreeEnumerator.MoveNext: Boolean;
+function TBinaryTreeBase<T>.TTreeEnumerator.MoveNext: Boolean;
 var
   Node: TNode;
 begin
@@ -1203,6 +1196,7 @@ begin
       this returns with a request to stop then return this node }
     if (Node = nil) then begin
       fCurrentNode:= fStack.Pop;
+      fCurrent:= fCurrentNode.Key;
       exit(true);
     end
     { otherwise, the children of the node have not been pushed yet }
@@ -1230,7 +1224,7 @@ begin
   Result:= false;
 end;
 
-procedure TBinaryTreeBase<K>.TTreeEnumerator.Reset;
+procedure TBinaryTreeBase<T>.TTreeEnumerator.Reset;
 begin
   fStack.Init;
   fCurrentNode:= nil;
@@ -1618,13 +1612,13 @@ begin
   Result:= false;
 end;
 
-function TBinaryTreeBase<K>.NewNode(const Key: K): TNode;
+function TBinaryTreeBase<T>.NewNode(const Key: T): TNode;
 begin
   Result:= TNode.Create(Key);
   Inc(fCount);
 end;
 
-procedure TBinaryTreeBase<K>.Traverse(order: TraverseOrder; const action:
+procedure TBinaryTreeBase<T>.Traverse(order: TraverseOrder; const action:
   TTraverseAction);
 var
   actionWrapper: TNodePredicate;
@@ -1705,5 +1699,4 @@ begin
 end;
 
 end.
-
 
