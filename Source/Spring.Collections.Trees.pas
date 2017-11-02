@@ -298,15 +298,17 @@ type
   end;
 
   TBinaryTreeBase<K,V> = class(TBinaryTreeBase<TPair<K, V>>)
+  protected type
+    TPair = TPair<K,V>;
   private type
-    TNode = TBinaryTreeBase<TPair<K, V>>.TNode;
+    TNode = TBinaryTreeBase<TPair>.TNode;
   private
     class var fKeyComparer: IComparer<K>;
     class function GetKeyComparer: IComparer<K>; static;
   protected
-    function Equal(const a, b: K): boolean; overload; virtual;
-    function Less(const a, b: K): boolean; overload; virtual;
-    function Pair(Key:K; Value: V): TPair<K,V>; inline;
+    function Equal(const a, b: K): boolean; overload;
+    function Less(const a, b: K): boolean; overload;
+    function Pair(const Key: K; const Value: V): TPair; inline;
     class property KeyComparer: IComparer<K> read GetKeyComparer;
   end;
 
@@ -328,12 +330,12 @@ type
     /// Examine the Count property to see if a node was inserted.
     ///
     /// Can lead to duplicate keys in the tree if not called with the Root as the Start</remarks>
-    function InternalInsert(Head: TNode; const Key: K; const Value: V): TNode; overload; virtual;
+    function InternalInsert(Head: TNode; const Key: K; const Value: V): TNode; reintroduce; overload; virtual;
   public
     constructor Create; override;
     destructor Destroy; override;
     function Add(const Key: TPair<K,V>): boolean; overload; override;
-    procedure Add(const Key: K; const Value: V); overload; virtual;
+    procedure Add(const Key: K; const Value: V); reintroduce; overload; virtual;
     function Get(Key: K): TPair<K,V>;
     function GetDirectChildern(const ParentKey: K): TArray<TPair<K,V>>;
   end;
@@ -460,7 +462,7 @@ type
   public
     function Last: K; overload; override;
     function Last(const Predicate: TPredicate<K>): K; overload;
-    function LastOrDefault(const DefaultValue: K): K; overload;
+    function LastOrDefault(const DefaultValue: K): K; overload; override;
     function LastOrDefault(const Predicate: TPredicate<K>; const DefaultValue: K): K; overload;
     function First: K; override;
     function Extract(const Key: K): K; override;
@@ -552,7 +554,7 @@ type
     ///   <b>True</b> if the IMap&lt;TKey, TValue&gt; contains a pair with the
     ///   specified key and value; otherwise <b>False</b>.
     /// </returns>
-    function Contains(const key: K; const value: V): Boolean;
+    function Contains(const key: K; const value: V): Boolean; reintroduce;
 
     /// <summary>
     /// Removes the element with the specified key from the
@@ -566,10 +568,10 @@ type
     /// <b>False</b>. This method also returns <b>False</b> if <i>key</i> was
     /// not found in the original IDictionary&lt;K, V&gt;.
     /// </returns>
-    function Remove(const key: K): Boolean; overload;
-    function Remove(const key: K; const value: V): Boolean; overload;
+    function Remove(const key: K): Boolean; reintroduce; overload;
+    function Remove(const key: K; const value: V): Boolean; reintroduce; overload;
 
-    function Extract(const key: K; const value: V): TPair; overload;
+    function Extract(const key: K; const value: V): TPair; reintroduce; overload;
 
     /// <summary>
     ///   Removes the value for a specified key without triggering lifetime
@@ -582,7 +584,7 @@ type
     ///   The removed value for the specified key if it existed; <b>default</b>
     ///   otherwise.
     /// </returns>
-    function Extract(const key: K): V; overload;
+    function Extract(const key: K): V; reintroduce; overload;
 
     /// <summary>
     ///   Removes the value for a specified key without triggering lifetime
@@ -1606,9 +1608,9 @@ begin
   Result:= KeyComparer.Compare(a, b) < 0;
 end;
 
-function TBinaryTreeBase<K, V>.Pair(Key: K; Value: V): TPair<K, V>;
+function TBinaryTreeBase<K, V>.Pair(const Key: K; const Value: V): TPair;
 begin
-  Result := TPair<K,V>.Create(key, value);
+  Result := TPair.Create(key, value);
 end;
 
 end.
