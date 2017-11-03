@@ -235,6 +235,13 @@ type
 
   {$Region 'TBinaryTreeBase<T>'}
   TBinaryTreeBase<T> = class(TTree<T>)
+  private const
+    {$ifdef debug}
+    cBucketSize = 16;
+    {$else}
+    cBucketSize = 1024;
+    {$endif}
+
   private type
     // Nodes in the tree, because the parent is not stored, these are dumb nodes.
     PNode = ^TNode;
@@ -292,7 +299,11 @@ type
     TNodePredicate = TPredicate<PNode>;
   strict private
     constructor Create;
+  protected type
+    TBucketIndex = TPair<NativeUInt, NativeUInt>;
   protected
+    fStorage: TArray<TArray<TNode>>;
+    function BucketIndex(Index: NativeUInt): TBucketIndex; inline;
     /// <summary>
     /// Destroys a single Node and updates the count.
     /// Fixes the root if nessecary
@@ -302,7 +313,6 @@ type
     /// </remarks>
     procedure FreeSingleNode(const Node: PNode);
   private
-    fStorage: TArray<TNode>;
     fRoot: PNode;
     fCount: Integer;
     procedure TraversePreOrder(const Node: PNode; Action: TNodePredicate);
@@ -765,6 +775,13 @@ begin
   if Assigned(Value) then Value.fParent:= @Self;
 end;
 
+function TBinaryTreeBase<T>.BucketIndex(Index: NativeUInt): TBucketIndex;
+begin
+  Result.Key:= Index div NativeUInt(cBucketSize);
+  Result.Value:= Index mod NativeUInt(cBucketSize);
+end;
+
+
 constructor TRedBlackTree<T>.Create(Species: TTreeSpecies);
 begin
   inherited Create;
@@ -1124,13 +1141,16 @@ begin
 end;
 
 procedure TBinaryTreeBase<T>.FreeSingleNode(const Node: PNode);
+var
+  Index: TBucketIndex;
 begin
   if Assigned(Node.Parent) then begin
     if (Node.Parent.Left = Node) then Node.Parent.Left:= nil
     else Node.Parent.Right:= nil;
   end;
   if (fCount > 1) then begin
-    Move(fStorage[fCount-1], Node^, SizeOf(TNode));
+    Index:= BucketIndex(fCount);
+    Move(fStorage[Index.Key, Index.Value], Node^, SizeOf(TNode));
   end;
   Dec(fCount);
 end;
@@ -1357,7 +1377,9 @@ procedure TRedBlackTree<K, V>.Add(const Key: K; const Value: V);
 var
   Pair: TPair;
 begin
-  Pair:= TPair.Create(Key, Value);
+  //Pair:= TPair.Create(Key, Value);
+  Pair.Key:= Key;
+  Pair.Value:= Value;
   inherited Add(Pair);
 end;
 
@@ -1718,14 +1740,23 @@ begin
 end;
 
 procedure TBinaryTreeBase<T>.ExpandStorage(OldCount: NativeUInt);
+var
+  Index: TBucketIndex;
 begin
-  SetLength(fStorage, (OldCount+10 * 3) div 2);
+  Index:= BucketIndex(OldCount);
+  SetLength(fStorage, Index.Key + 1);
+  SetLength(fStorage[Index.Key], cBucketSize);
 end;
 
 function TBinaryTreeBase<T>.NewNode(const Key: T; Parent: PNode): PNode;
+var
+  Index: TBucketIndex;
 begin
-  if Length(fStorage) <= fCount then ExpandStorage(fCount);
-  Result:= @fStorage[fCount];
+  Index:= BucketIndex(fCount);
+  if (Index.Value = 0) then begin
+    ExpandStorage(fCount);
+  end;
+  Result:= @fStorage[Index.Key,Index.Value];
   Result.fLeft:= nil;
   Result.fRight:= nil;
   Result.SetParent(Parent);
