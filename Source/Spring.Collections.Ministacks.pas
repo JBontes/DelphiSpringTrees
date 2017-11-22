@@ -31,7 +31,11 @@ unit Spring.Collections.Ministacks;
 interface
 
 const
+  {$ifdef CPUX64}
   DefaultSize = 63;
+  {$else}
+  DefaultSize = 31;
+  {$endif}
 
 type
   /// <summary>
