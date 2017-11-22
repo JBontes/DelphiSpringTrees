@@ -1,13 +1,41 @@
+{ *************************************************************************** }
+{                                                                             }
+{ Proposed addition to the                                                    }
+{           Spring Framework for Delphi                                       }
+{                                                                             }
+{ Copyright (c) 2009-2014 Spring4D Team                                       }
+{                                                                             }
+{ http://www.spring4d.org                                                     }
+{                                                                             }
+{ *************************************************************************** }
+{                                                                             }
+{ Licensed under the Apache License, Version 2.0 (the "License");             }
+{ you may not use this file except in compliance with the License.            }
+{ You may obtain a copy of the License at                                     }
+{                                                                             }
+{ http://www.apache.org/licenses/LICENSE-2.0                                  }
+{                                                                             }
+{ Unless required by applicable law or agreed to in writing, software         }
+{ distributed under the License is distributed on an "AS IS" BASIS,           }
+{ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.    }
+{ See the License for the specific language governing permissions and         }
+{ limitations under the License.                                              }
+{                                                                             }
+{ *************************************************************************** }
+
+// Implements a fast stack for use with tree iterators.
+
+
 unit Spring.Collections.Ministacks;
 
 interface
 
 const
-  DefaultSize = 31;
+  DefaultSize = 63;
 
 type
   /// <summary>
-  /// The ministack stores 31 elements on the system's stack.
+  /// The ministack stores DefaultSize elements on the system's stack.
   /// It is coded for raw speed.
   /// The stack is safe for holding managed types
   /// It does not do range checking, other than through Assertions at debug time
@@ -26,6 +54,7 @@ type
     HeapFlag: TGUID;
     HeapSize: Integer;
 {$ENDIF}
+    //Must be the last item on the list.
     Items: array[0..DefaultSize - 1] of T;
     function GetItem(index: Integer): T; inline;
   public
@@ -45,6 +74,7 @@ type
     function IsEmpty: Boolean; inline;
     /// <summary>
     /// Allows the stack to be accessed as a read-only array.
+    /// Note that Item[0] is the most recent item, Item[1] the item below that etc.
     /// </summary>
     property Item[index: Integer]: T read GetItem;
     property Count: integer read SP;
@@ -98,7 +128,7 @@ begin
 end;
 
 {$IFDEF DEBUG}
-function TMiniStack<T>.capacity: Integer;
+function TMiniStack<T>.Capacity: Integer;
 begin
   if HeapFlag = MagicHeapFlag then begin
     Result:= HeapSize;
@@ -122,7 +152,7 @@ function TMiniStack<T>.GetItem(index: Integer): T;
 begin
   Assert((index >= 0) and (index < Count),
     Format('Trying to get item #%d, but there are only %d items on the stack',[index, count]));
-  Result:= Items[index];
+  Result:= Items[count - index - 1];
 end;
 
 function TMiniStack<T>.IsEmpty: Boolean;
