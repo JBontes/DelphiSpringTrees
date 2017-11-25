@@ -1,28 +1,28 @@
 unit Spring.Collections.TreeImpl;
 
 { *************************************************************************** }
-{                                                                             }
-{ Proposed addition to the                                                    }
-{           Spring Framework for Delphi                                       }
-{                                                                             }
-{ Copyright (c) 2009-2017 Spring4D Team                                       }
-{                                                                             }
-{ http://www.spring4d.org                                                     }
-{                                                                             }
+{ }
+{ Proposed addition to the }
+{ Spring Framework for Delphi }
+{ }
+{ Copyright (c) 2009-2017 Spring4D Team }
+{ }
+{ http://www.spring4d.org }
+{ }
 { *************************************************************************** }
-{                                                                             }
-{ Licensed under the Apache License, Version 2.0 (the "License");             }
-{ you may not use this file except in compliance with the License.            }
-{ You may obtain a copy of the License at                                     }
-{                                                                             }
-{ http://www.apache.org/licenses/LICENSE-2.0                                  }
-{                                                                             }
-{ Unless required by applicable law or agreed to in writing, software         }
-{ distributed under the License is distributed on an "AS IS" BASIS,           }
-{ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.    }
-{ See the License for the specific language governing permissions and         }
-{ limitations under the License.                                              }
-{                                                                             }
+{ }
+{ Licensed under the Apache License, Version 2.0 (the "License"); }
+{ you may not use this file except in compliance with the License. }
+{ You may obtain a copy of the License at }
+{ }
+{ http://www.apache.org/licenses/LICENSE-2.0 }
+{ }
+{ Unless required by applicable law or agreed to in writing, software }
+{ distributed under the License is distributed on an "AS IS" BASIS, }
+{ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. }
+{ See the License for the specific language governing permissions and }
+{ limitations under the License. }
+{ }
 { *************************************************************************** }
 
 // Adds left leaning red black trees to the spring framework.
@@ -53,9 +53,9 @@ uses
   Spring.Collections.MiniStacks;
 
 type
-  {$Region 'TTree<T>'}
+{$REGION 'TTree<T>'}
   /// <summary>
-  ///   Abstract parent for tree, defines the tree as a set of keys
+  /// Abstract parent for tree, defines the tree as a set of keys
   /// </summary>
   TTree<T> = class abstract(TCollectionBase<T>, ISet<T>, ITree<T>)
   private
@@ -64,190 +64,191 @@ type
     procedure AddInternal(const Item: T); override;
   public
 
-    ///	<summary>
-    ///	  Adds an element to the current set and returns a Value to indicate if
-    ///	  the element was successfully added.
-    ///	</summary>
-    ///	<param name="item">
-    ///	  The element to add to the set.
-    ///	</param>
-    ///	<returns>
-    ///	  <b>True</b> if the element is added to the set; <b>False</b> if the
-    ///	  element is already in the set.
-    ///	</returns>
+    /// <summary>
+    /// Adds an element to the current set and returns a Value to indicate if
+    /// the element was successfully added.
+    /// </summary>
+    /// <param name="item">
+    /// The element to add to the set.
+    /// </param>
+    /// <returns>
+    /// <b>True</b> if the element is added to the set; <b>False</b> if the
+    /// element is already in the set.
+    /// </returns>
     function Add(const Item: T): boolean; virtual; abstract;
 
-    ///	<summary>
-    ///	  Determines whether a <see cref="Tree&lt;T&gt;" /> object contains
-    ///	  the specified element.
-    ///	</summary>
-    ///	<param name="item">
-    ///	  The element to locate in the <see cref="THashSet&lt;T&gt;" /> object.
-    ///	</param>
-    ///	<returns>
-    ///	  <b>True</b> if the <see cref="THashSet&lt;T&gt;" /> object contains
-    ///	  the specified element; otherwise, <b>False</b>.
-    ///	</returns>
+    /// <summary>
+    /// Determines whether a <see cref="Tree&lt;T&gt;" /> object contains
+    /// the specified element.
+    /// </summary>
+    /// <param name="item">
+    /// The element to locate in the <see cref="THashSet&lt;T&gt;" /> object.
+    /// </param>
+    /// <returns>
+    /// <b>True</b> if the <see cref="THashSet&lt;T&gt;" /> object contains
+    /// the specified element; otherwise, <b>False</b>.
+    /// </returns>
     function Contains(const Key: T): boolean; reintroduce; virtual; abstract;
 
-    ///	<summary>
-    ///	  Removes all elements in the specified Collection from the current
-    ///	  <see cref="Tree&lt;T&gt;" /> object.
-    ///	</summary>
-    ///	<param name="Other">
-    ///	  The Collection of items to remove from the
-    ///	  <see cref="THashSet&lt;T&gt;" /> object.
-    ///	</param>
-    ///	<exception cref="EArgumentNullException">
-    ///	  <i>Other</i> is <b>nil</b>.
-    ///	</exception>
+    /// <summary>
+    /// Removes all elements in the specified Collection from the current
+    /// <see cref="Tree&lt;T&gt;" /> object.
+    /// </summary>
+    /// <param name="Other">
+    /// The Collection of items to remove from the
+    /// <see cref="THashSet&lt;T&gt;" /> object.
+    /// </param>
+    /// <exception cref="EArgumentNullException">
+    /// <i>Other</i> is <b>nil</b>.
+    /// </exception>
     procedure ExceptWith(const Other: IEnumerable<T>); virtual;
 
-    ///	<summary>
-    ///	  Modifies the current <see cref="Tree&lt;T&gt;" /> object to
-    ///	  contain only elements that are present in that object and in the
-    ///	  specified Collection.
-    ///	</summary>
-    ///	<param name="Other">
-    ///	  The Collection to compare to the current
-    ///	  <see cref="Tree&lt;T&gt;" /> object.
-    ///	</param>
-    ///	<exception cref="EArgumentNullException">
-    ///	  <i>Other</i> is <b>nil</b>.
-    ///	</exception>
+    /// <summary>
+    /// Modifies the current <see cref="Tree&lt;T&gt;" /> object to
+    /// contain only elements that are present in that object and in the
+    /// specified Collection.
+    /// </summary>
+    /// <param name="Other">
+    /// The Collection to compare to the current
+    /// <see cref="Tree&lt;T&gt;" /> object.
+    /// </param>
+    /// <exception cref="EArgumentNullException">
+    /// <i>Other</i> is <b>nil</b>.
+    /// </exception>
     procedure IntersectWith(const Other: IEnumerable<T>); virtual;
 
-    ///	<summary>
-    ///	  Modifies the current <see cref="Tree&lt;T&gt;" /> object to
-    ///	  contain all elements that are present in itself, the specified
-    ///	  Collection, or both.
-    ///	</summary>
-    ///	<param name="Other">
-    ///	  The Collection to compare to the current
-    ///	  <see cref="Tree&lt;T&gt;" /> object.
-    ///	</param>
-    ///	<exception cref="EArgumentNullException">
-    ///	  <i>Other</i> is <b>nil</b>.
-    ///	</exception>
+    /// <summary>
+    /// Modifies the current <see cref="Tree&lt;T&gt;" /> object to
+    /// contain all elements that are present in itself, the specified
+    /// Collection, or both.
+    /// </summary>
+    /// <param name="Other">
+    /// The Collection to compare to the current
+    /// <see cref="Tree&lt;T&gt;" /> object.
+    /// </param>
+    /// <exception cref="EArgumentNullException">
+    /// <i>Other</i> is <b>nil</b>.
+    /// </exception>
     procedure UnionWith(const Other: IEnumerable<T>); virtual;
 
-    ///	<summary>
-    ///	  Determines whether a <see cref="Tree&lt;T&gt;" /> object is a
-    ///	  subset of the specified Collection.
-    ///	</summary>
-    ///	<param name="Other">
-    ///	  The Collection to compare to the current
-    ///	  <see cref="THashSet&lt;T&gt;" /> object.
-    ///	</param>
-    ///	<returns>
-    ///	  <b>True</b> if the <see cref="Tree&lt;T&gt;" /> object is a
-    ///	  subset of <i>Other</i>; otherwise, <b>False</b>.
-    ///	</returns>
-    ///	<exception cref="EArgumentNullException">
-    ///	  <i>Other</i> is <b>nil</b>.
-    ///	</exception>
-    function IsSubsetOf(const Other: IEnumerable<T>): Boolean; virtual;
+    /// <summary>
+    /// Determines whether a <see cref="Tree&lt;T&gt;" /> object is a
+    /// subset of the specified Collection.
+    /// </summary>
+    /// <param name="Other">
+    /// The Collection to compare to the current
+    /// <see cref="THashSet&lt;T&gt;" /> object.
+    /// </param>
+    /// <returns>
+    /// <b>True</b> if the <see cref="Tree&lt;T&gt;" /> object is a
+    /// subset of <i>Other</i>; otherwise, <b>False</b>.
+    /// </returns>
+    /// <exception cref="EArgumentNullException">
+    /// <i>Other</i> is <b>nil</b>.
+    /// </exception>
+    function IsSubsetOf(const Other: IEnumerable<T>): boolean; virtual;
 
-    ///	<summary>
-    ///	  Determines whether a <see cref="Tree&lt;T&gt;" /> object is a
-    ///	  superset of the specified Collection.
-    ///	</summary>
-    ///	<param name="Other">
-    ///	  The Collection to compare to the current
-    ///	  <see cref="THashSet&lt;T&gt;" /> object.
-    ///	</param>
-    ///	<returns>
-    ///	  <b>True</b> if the <see cref="Tree&lt;T&gt;" /> object is a
-    ///	  superset of <i>Other</i>; otherwise, <b>False</b>.
-    ///	</returns>
-    ///	<exception cref="EArgumentNullException">
-    ///	  <i>Other</i> is <b>nil</b>.
-    ///	</exception>
-    function IsSupersetOf(const Other: IEnumerable<T>): Boolean; virtual;
+    /// <summary>
+    /// Determines whether a <see cref="Tree&lt;T&gt;" /> object is a
+    /// superset of the specified Collection.
+    /// </summary>
+    /// <param name="Other">
+    /// The Collection to compare to the current
+    /// <see cref="THashSet&lt;T&gt;" /> object.
+    /// </param>
+    /// <returns>
+    /// <b>True</b> if the <see cref="Tree&lt;T&gt;" /> object is a
+    /// superset of <i>Other</i>; otherwise, <b>False</b>.
+    /// </returns>
+    /// <exception cref="EArgumentNullException">
+    /// <i>Other</i> is <b>nil</b>.
+    /// </exception>
+    function IsSupersetOf(const Other: IEnumerable<T>): boolean; virtual;
 
-    ///	<summary>
-    ///	  Determines whether a <see cref="THashSet&lt;T&gt;" /> object and the
-    ///	  specified Collection contain the same elements.
-    ///	</summary>
-    ///	<param name="Other">
-    ///	  The Collection to compare to the current
-    ///	  <see cref="THashSet&lt;T&gt;" /> object.
-    ///	</param>
-    ///	<returns>
-    ///	  <b>True</b> if the <see cref="THashSet&lt;T&gt;" /> object is equal
-    ///	  to <i>Other</i>; otherwise, <b>False</b>.
-    ///	</returns>
-    ///	<exception cref="EArgumentNullException">
-    ///	  <i>Other</i> is <b>nil</b>.
-    ///	</exception>
-    function SetEquals(const Other: IEnumerable<T>): Boolean; virtual;
+    /// <summary>
+    /// Determines whether a <see cref="THashSet&lt;T&gt;" /> object and the
+    /// specified Collection contain the same elements.
+    /// </summary>
+    /// <param name="Other">
+    /// The Collection to compare to the current
+    /// <see cref="THashSet&lt;T&gt;" /> object.
+    /// </param>
+    /// <returns>
+    /// <b>True</b> if the <see cref="THashSet&lt;T&gt;" /> object is equal
+    /// to <i>Other</i>; otherwise, <b>False</b>.
+    /// </returns>
+    /// <exception cref="EArgumentNullException">
+    /// <i>Other</i> is <b>nil</b>.
+    /// </exception>
+    function SetEquals(const Other: IEnumerable<T>): boolean; virtual;
 
-    ///	<summary>
-    ///	  Determines whether the current <see cref="Tree&lt;T&gt;" />
-    ///	  object and a specified Collection share common elements.
-    ///	</summary>
-    ///	<param name="Other">
-    ///	  The Collection to compare to the current
-    ///	  <see cref="THashSet&lt;T&gt;" /> object.
-    ///	</param>
-    ///	<returns>
-    ///	  <b>True</b> if the <see cref="Tree&lt;T&gt;" /> object and
-    ///	  <i>Other</i> share at least one common element; otherwise,
-    ///	  <b>False</b>.
-    ///	</returns>
-    ///	<exception cref="EArgumentNullException">
-    ///	  <i>Other</i> is <b>nil</b>.
-    ///	</exception>
-    function Overlaps(const Other: IEnumerable<T>): Boolean; virtual;
+    /// <summary>
+    /// Determines whether the current <see cref="Tree&lt;T&gt;" />
+    /// object and a specified Collection share common elements.
+    /// </summary>
+    /// <param name="Other">
+    /// The Collection to compare to the current
+    /// <see cref="THashSet&lt;T&gt;" /> object.
+    /// </param>
+    /// <returns>
+    /// <b>True</b> if the <see cref="Tree&lt;T&gt;" /> object and
+    /// <i>Other</i> share at least one common element; otherwise,
+    /// <b>False</b>.
+    /// </returns>
+    /// <exception cref="EArgumentNullException">
+    /// <i>Other</i> is <b>nil</b>.
+    /// </exception>
+    function Overlaps(const Other: IEnumerable<T>): boolean; virtual;
   end;
-  {$EndRegion}
+{$ENDREGION}
+{$SCOPEDENUMS ON}
 
-  {$SCOPEDENUMS ON}
   TraverseOrder = (PreOrder, InOrder, ReverseOrder, PostOrder);
-  {$SCOPEDENUMS OFF}
+{$SCOPEDENUMS OFF}
+{$REGION 'TBinaryTreeBase<T>'}
 
-  {$Region 'TBinaryTreeBase<T>'}
   TBinaryTreeBase<T> = class(TTree<T>)
   private const
-    {$ifdef debug}
+{$IFDEF debug}
     cBucketSize = 16;
-    {$else}
+{$ELSE}
     cBucketSize = 1024;
-    {$endif}
-
-  private type
+{$ENDIF}
+  protected type
     // Nodes in the tree. The nodes hold a pointer to their parent to allow
     // for swapping of nodes, which we need to support the bucket storage system.
     PNode = ^TNode;
+
     TNode = record
     strict private
-      fParent: PNode; //Used for rearraging nodes in the underlying storage.
+      fParent: PNode; // Used for rearraging nodes in the underlying storage.
     private
       fLeft: PNode; // Left nodes hold lower values
       fRight: PNode; // Right nodes hold higher values
       fKey: T; // The payload, use a TPair<K,V> to store a Key/Value pair.
+    public //Allow fIsBlack to be repurposed
       fIsBlack: boolean; // Red is the default.
-
+    private
       /// <summary>
-      ///  Static method to get the color. Always use this method, never read the
-      ///  field directly, because the Node might be nil.
-      ///  A nil node with a color is valid.
+      /// Static method to get the color. Always use this method, never read the
+      /// field directly, because the Node might be nil.
+      /// A nil node with a color is valid.
       /// </summary>
       /// <returns> false if self is nil; true is the Node is red, false otherwise</returns>
       function IsRed: boolean; inline;
       /// <summary>
-      ///  Update the Left node and set the correct parent as well.
-      ///  A nil Value is allowed.
+      /// Update the Left node and set the correct parent as well.
+      /// A nil Value is allowed.
       /// </summary>
       procedure SetLeft(const Value: PNode); inline;
       /// <summary>
-      ///  Update the Right node and set the correct parent as well.
-      ///  A nil Value is allowed.
+      /// Update the Right node and set the correct parent as well.
+      /// A nil Value is allowed.
       /// </summary>
       procedure SetRight(const Value: PNode); inline;
       /// <summary>
-      ///  Only call SetParent in Tree.NewNode!
-      ///  Everywhere else SetLeft/SetRight will set the correct parent.
+      /// Only call SetParent in Tree.NewNode!
+      /// Everywhere else SetLeft/SetRight will set the correct parent.
       /// </summary>
       procedure SetParent(const Value: PNode); inline;
       property NodeColor: boolean read fIsBlack write fIsBlack;
@@ -255,7 +256,7 @@ type
       property Left: PNode read fLeft write SetLeft;
       property Right: PNode read fRight write SetRight;
       property Parent: PNode read fParent;
-      property Key: T read fKey;// write fKey;
+      property Key: T read fKey; // write fKey;
     end;
   private type
     /// <summary>
@@ -276,16 +277,16 @@ type
     public
       destructor Destroy; override;
       procedure Reset; override;
-      function MoveNext: Boolean; override;
+      function MoveNext: boolean; override;
       // function GetEnumerator: IEnumerator<T>; override;
-      //function GetCurrent: T;
+      // function GetCurrent: T;
       property Current: T read GetCurrent;
       property CurrentNode: PNode read fCurrentNode;
     end;
   private type
     TNodePredicate = TPredicate<PNode>;
   strict private
-    //Disable the default constructor.
+    // Disable the default constructor.
     constructor Create;
   protected type
     TBucketIndex = TPair<NativeUInt, NativeUInt>;
@@ -314,7 +315,7 @@ type
     /// <summary>
     /// Convienance method to see if (a < b).
     /// </summary>
-    function Less(const A, B: T): Boolean; inline;
+    function Less(const A, B: T): boolean; inline;
     /// <summary>
     /// Finds the Node containing the Key in the given subtree.
     /// </summary>
@@ -327,35 +328,34 @@ type
 
     function InternalInsert(Head: PNode; const Key: T): PNode; virtual;
     /// <summary>
-    ///  Expand the storage to add another bucket.
-    ///  Should perhaps be more intelligent when the tree is expanding fast?
+    /// Expand the storage to add another bucket.
+    /// Should perhaps be more intelligent when the tree is expanding fast?
     /// </summary>
     procedure ExpandStorage(OldCount: NativeUInt);
 
     property Root: PNode read fRoot;
   public type
-    TTraverseAction = reference to procedure (const Key: T; var Abort: boolean);
+    TTraverseAction = reference to procedure(const Key: T; var Abort: boolean);
   public
     function Add(const Item: T): boolean; override;
     function Contains(const Key: T): boolean; override;
-    procedure Clear; reintroduce;
-    property Count: integer read fCount;
+    procedure Clear; override;
+    property Count: Integer read fCount;
     procedure Traverse(Order: TraverseOrder; const Action: TTraverseAction);
   end;
-  {$EndRegion}
+{$ENDREGION}
+{$REGION 'TBinaryTreeBase<K,V>'}
 
-
-  {$Region 'TBinaryTreeBase<K,V>'}
-  TBinaryTreeBase<K,V> = class(TBinaryTreeBase<TPair<K, V>>)
+  TBinaryTreeBase<K, V> = class(TBinaryTreeBase < TPair < K, V >> )
   protected type
-    TPair = TPair<K,V>;
+    TPair = TPair<K, V>;
   private type
     PNode = TBinaryTreeBase<TPair>.PNode;
   private
     class var fKeyComparer: IComparer<K>;
     class function GetKeyComparer: IComparer<K>; static;
   public type
-    TTraverseAction = reference to procedure (const Key: K; const Value: V; var Abort: boolean);
+    TTraverseAction = reference to procedure(const Key: K; const Value: V; var Abort: boolean);
   protected
     function Equal(const A, B: K): boolean; overload;
     function Less(const A, B: K): boolean; overload;
@@ -364,13 +364,13 @@ type
   public
     procedure Traverse(Order: TraverseOrder; const Action: TTraverseAction);
   end;
-  {$EndRegion}
+{$ENDREGION}
+{$REGION 'TNAryTree<K,V>'}
 
-  {$Region 'TNAryTree<K,V>'}
   TNAryTree<K, V> = class(TBinaryTreeBase<K, V>)
   private type
     PNode = ^TNode;
-    TNode = TBinaryTreeBase<TPair<K,V>>.TNode;
+    TNode = TBinaryTreeBase < TPair < K, V >>.TNode;
   private
     /// <summary>
     /// Inserts a Node into the subtree anchored at Start.
@@ -391,15 +391,41 @@ type
     constructor Create; override;
     destructor Destroy; override;
   public
-    function Add(const Key: TPair<K,V>): boolean; overload; override;
+    function Add(const Key: TPair<K, V>): boolean; overload; override;
     procedure Add(const Key: K; const Value: V); reintroduce; overload; virtual;
-    function Get(Key: K): TPair<K,V>;
-    function GetDirectChildern(const ParentKey: K): TArray<TPair<K,V>>;
+    function Get(Key: K): TPair<K, V>;
+    function GetDirectChildern(const ParentKey: K): TArray<TPair<K, V>>;
   end;
-  {$EndRegion}
+{$ENDREGION}
+{$REGION 'TRedBlackTree<T>'}
 
+//{$REGION 'TAVLTree<T>'}
+//  TAVLTree<T> = class(TBinaryTreeBase<T>)
+//  private type
+//    TBalance = -2..2;
+//  private type
+//    PNode = ^TNode;
+//    TNode = TBinaryTreeBase<T>.TNode;
+//    TNodePredicate = TBinaryTreeBase<T>.TNodePredicate;
+//  private type
+//    TAVLNodeHelper = record helper for TNode
+//      function GetCount: NativeInt;
+//      function TreeDepth: NativeInt;        //longest way down
+//      //We repurpose the fColor as a TBalance member.
+//      function GetBalance: TBalance; inline;
+//      procedure SetBalance(const Value: TBalance); inline;
+//      property Balance: TBalance read GetBalance write SetBalance;
+//      property Count: NativeInt read GetCount;
+//    end;
+//  protected
+//    procedure BalanceAfterInsert(Node: PNode);
+//    procedure BalanceAfterDelete(Node: PNode);
+//    procedure RotateLeft(Node: PNode);
+//    procedure RotateRight(Node: PNode);
+//    procedure SwitchPositionWithSuccessor
+//  end;
+//{$ENDREGION}
 
-  {$Region 'TRedBlackTree<T>'}
   /// <summary>
   /// Left Leaning red black tree, mainly useful for encaplating a Set.
   /// Does not allow duplicate items.
@@ -419,7 +445,7 @@ type
   private // Test methods
     function Is234(Node: PNode): boolean; overload; virtual;
     function IsBST(Node: PNode; MinKey, MaxKey: T): boolean; overload; virtual;
-    function IsBalanced(Node: PNode; Black: integer): boolean; overload; virtual;
+    function IsBalanced(Node: PNode; Black: Integer): boolean; overload; virtual;
 {$ENDIF}
   private
     /// <summary>
@@ -531,10 +557,10 @@ type
     function Add(const Key: T): boolean; override;
     function Get(const Key: T): T; overload;
   end;
-  {$EndRegion}
+{$ENDREGION}
+{$REGION 'TRedBlackTree<K,V>'}
 
-  {$Region 'TRedBlackTree<K,V>'}
-  TRedBlackTree<K, V> = class(TRedBlackTree<TPair<K, V>>, IDictionary<K, V>, ITree<K,V>)
+  TRedBlackTree<K, V> = class(TRedBlackTree<TPair<K, V>>, IDictionary<K, V>, ITree<K, V>)
   private type
     TPair = TPair<K, V>;
   private type
@@ -562,10 +588,10 @@ type
     procedure SetItem(const Key: K; const Value: V);
     function GetComparer: IComparer<TPair>;
     property Comparer: IComparer<TPair> read GetComparer;
-    function Pair(const Key:K; const Value: V): TPair;
+    function Pair(const Key: K; const Value: V): TPair;
 {$ENDREGION}
   public type
-    TTraverseAction = reference to procedure (const Key: K; const Value: V; var Abort: boolean);
+    TTraverseAction = reference to procedure(const Key: K; const Value: V; var Abort: boolean);
   protected
     constructor Create(Species: TTreeSpecies = TD234); reintroduce; overload;
     constructor Create(const Comparer: IComparer<K>; Species: TTreeSpecies = TD234); reintroduce; overload;
@@ -598,7 +624,7 @@ type
     /// <b>True</b> if the IDictionary&lt;K, V&gt; contains an
     /// element with the Key; otherwise, <b>False</b>.
     /// </returns>
-    function ContainsKey(const Key: K): Boolean;
+    function ContainsKey(const Key: K): boolean;
     /// <summary>
     /// Determines whether the IDictionary&lt;K, V&gt; contains an
     /// element with the specified Value.
@@ -606,23 +632,23 @@ type
     /// <param name="Value">
     /// The Value to locate in the IDictionary&lt;K, V&gt;.
     /// </param>
-    function ContainsValue(const Value: V): Boolean;
+    function ContainsValue(const Value: V): boolean;
 
     /// <summary>
-    ///   Determines whether the IMap&lt;TKey,TValue&gt; contains the specified
-    ///   Key/Value pair.
+    /// Determines whether the IMap&lt;TKey,TValue&gt; contains the specified
+    /// Key/Value pair.
     /// </summary>
     /// <param name="Key">
-    ///   The Key of the pair to locate in the IMap&lt;TKey, TValue&gt;.
+    /// The Key of the pair to locate in the IMap&lt;TKey, TValue&gt;.
     /// </param>
     /// <param name="Value">
-    ///   The Value of the pair to locate in the IMap&lt;TKey, TValue&gt;.
+    /// The Value of the pair to locate in the IMap&lt;TKey, TValue&gt;.
     /// </param>
     /// <returns>
-    ///   <b>True</b> if the IMap&lt;TKey, TValue&gt; contains a pair with the
-    ///   specified Key and Value; otherwise <b>False</b>.
+    /// <b>True</b> if the IMap&lt;TKey, TValue&gt; contains a pair with the
+    /// specified Key and Value; otherwise <b>False</b>.
     /// </returns>
-    function Contains(const Key: K; const Value: V): Boolean; reintroduce;
+    function Contains(const Key: K; const Value: V): boolean; reintroduce;
 
     /// <summary>
     /// Removes the element with the specified Key from the
@@ -636,34 +662,34 @@ type
     /// <b>False</b>. This method also returns <b>False</b> if <i>Key</i> was
     /// not found in the original IDictionary&lt;K, V&gt;.
     /// </returns>
-    function Remove(const Key: K): Boolean; reintroduce; overload;
-    function Remove(const Key: K; const Value: V): Boolean; reintroduce; overload;
+    function Remove(const Key: K): boolean; reintroduce; overload;
+    function Remove(const Key: K; const Value: V): boolean; reintroduce; overload;
 
     function Extract(const Key: K; const Value: V): TPair; reintroduce; overload;
 
     /// <summary>
-    ///   Removes the Value for a specified Key without triggering lifetime
-    ///   management for objects.
+    /// Removes the Value for a specified Key without triggering lifetime
+    /// management for objects.
     /// </summary>
     /// <param name="Key">
-    ///   The Key whose Value to remove.
+    /// The Key whose Value to remove.
     /// </param>
     /// <returns>
-    ///   The removed Value for the specified Key if it existed; <b>default</b>
-    ///   otherwise.
+    /// The removed Value for the specified Key if it existed; <b>default</b>
+    /// otherwise.
     /// </returns>
     function Extract(const Key: K): V; reintroduce; overload;
 
     /// <summary>
-    ///   Removes the Value for a specified Key without triggering lifetime
-    ///   management for objects.
+    /// Removes the Value for a specified Key without triggering lifetime
+    /// management for objects.
     /// </summary>
     /// <param name="Key">
-    ///   The Key whose Value to remove.
+    /// The Key whose Value to remove.
     /// </param>
     /// <returns>
-    ///   The removed pair for the specified Key if it existed; <b>default</b>
-    ///   otherwise.
+    /// The removed pair for the specified Key if it existed; <b>default</b>
+    /// otherwise.
     /// </returns>
     function ExtractPair(const Key: K): TPair;
 
@@ -683,19 +709,19 @@ type
     /// V&gt; contains an element with the specified Key; otherwise,
     /// <b>False</b>.
     /// </returns>
-    function TryGetValue(const Key: K; out Value: V): Boolean;
+    function TryGetValue(const Key: K; out Value: V): boolean;
 
     /// <summary>
-    ///   Gets the Value for a given Key if a matching Key exists in the
-    ///   dictionary; returns the default Value otherwise.
+    /// Gets the Value for a given Key if a matching Key exists in the
+    /// dictionary; returns the default Value otherwise.
     /// </summary>
     function GetValueOrDefault(const Key: K): V; overload;
 
     /// <summary>
-    ///   Gets the Value for a given Key if a matching Key exists in the
-    ///   dictionary; returns the given default Value otherwise.
+    /// Gets the Value for a given Key if a matching Key exists in the
+    /// dictionary; returns the given default Value otherwise.
     /// </summary>
-    function GetValueOrDefault(const Key: K; const defaultValue: V): V; overload;
+    function GetValueOrDefault(const Key: K; const DefaultValue: V): V; overload;
 
     function AsReadOnlyDictionary: IReadOnlyDictionary<K, V>;
 
@@ -737,7 +763,7 @@ type
     property KeyType: PTypeInfo read GetKeyType;
     property ValueType: PTypeInfo read GetValueType;
   end;
-  {$EndRegion}
+{$ENDREGION}
 
 resourcestring
   SSetDuplicateInsert = 'Cannot insert a duplicate item in a set';
@@ -750,18 +776,17 @@ uses
   Spring.Collections.Lists,
   Spring.Collections.Events;
 
-
 type
   Color = record
-    public const
-      // Red and Black are modelled as boolean to simplify the IsRed function.
-      Red = false;
-      Black = true;
+  public const
+    // Red and Black are modelled as boolean to simplify the IsRed function.
+    Red = false;
+    Black = true;
   end;
 
 procedure TBinaryTreeBase<T>.TNode.SetLeft(const Value: PNode);
 begin
-  fLeft := Value;
+  fLeft:= Value;
   if Assigned(Value) then Value.fParent:= @Self;
 end;
 
@@ -772,16 +797,15 @@ end;
 
 procedure TBinaryTreeBase<T>.TNode.SetRight(const Value: PNode);
 begin
-  fRight := Value;
+  fRight:= Value;
   if Assigned(Value) then Value.fParent:= @Self;
 end;
 
 function TBinaryTreeBase<T>.BucketIndex(Index: NativeUInt): TBucketIndex;
 begin
-  Result.Key:= Index div NativeUInt(cBucketSize);
-  Result.Value:= Index mod NativeUInt(cBucketSize);
+  Result.Key:= index div NativeUInt(cBucketSize);
+  Result.Value:= index mod NativeUInt(cBucketSize);
 end;
-
 
 constructor TRedBlackTree<T>.Create(Species: TTreeSpecies = TD234);
 begin
@@ -792,13 +816,13 @@ end;
 constructor TRedBlackTree<T>.Create(const Comparer: TComparison<T>; Species: TTreeSpecies = TD234);
 begin
   inherited Create(Comparer);
-  fSpecies := Species;
+  fSpecies:= Species;
 end;
 
 constructor TRedBlackTree<T>.Create(const Comparer: IComparer<T>; Species: TTreeSpecies = TD234);
 begin
   inherited Create(Comparer);
-  fSpecies := Species;
+  fSpecies:= Species;
 end;
 
 constructor TRedBlackTree<T>.Create(const Collection: IEnumerable<T>; Species: TTreeSpecies = TD234);
@@ -834,7 +858,7 @@ end;
 
 function TBinaryTreeBase<T>.Add(const Item: T): boolean;
 var
-  OldCount: integer;
+  OldCount: Integer;
 begin
   OldCount:= Count;
   fRoot:= Self.InternalInsert(fRoot, Item);
@@ -865,8 +889,7 @@ begin
   if Equal(Key, Head.Key) then raise EInvalidOperationException.CreateRes(@SSetDuplicateInsert)
   else if (Less(Key, Head.Key)) then begin
     Head.Left:= InternalInsert(Head.Left, Key);
-  end
-  else begin
+  end else begin
     Head.Right:= InternalInsert(Head.Right, Key);
   end;
 
@@ -901,7 +924,7 @@ end;
 
 function TRedBlackTree<T>.Add(const Key: T): boolean;
 var
-  OldCount: integer;
+  OldCount: Integer;
 begin
   OldCount:= Count;
   fRoot:= InternalInsert(fRoot, Key);
@@ -972,7 +995,7 @@ end;
 
 function TRedBlackTree<T>.Remove(const Key: T): boolean;
 var
-  OldCount: integer;
+  OldCount: Integer;
 begin
   OldCount:= Count;
   fRoot:= DeleteNode(Root, Key);
@@ -1039,7 +1062,7 @@ begin
   Result:= DefaultValue;
 end;
 
-function TBinaryTreeBase<T>.Less(const A, B: T): Boolean;
+function TBinaryTreeBase<T>.Less(const A, B: T): boolean;
 begin
   Result:= Comparer.Compare(A, B) < 0;
 end;
@@ -1131,8 +1154,6 @@ begin
   Result:= Node;
 end;
 
-
-
 function TRedBlackTree<T>.FixUp(Node: PNode): PNode;
 begin
   Assert(Assigned(Node));
@@ -1158,8 +1179,8 @@ begin
     else Node.Parent.Right:= nil;
   end;
   if (fCount > 1) then begin
-    Index:= BucketIndex(fCount);
-    Move(fStorage[Index.Key, Index.Value], Node^, SizeOf(TNode));
+    index:= BucketIndex(fCount);
+    Move(fStorage[index.Key, index.Value], Node^, SizeOf(TNode));
   end;
   Dec(fCount);
 end;
@@ -1169,17 +1190,16 @@ begin
   Assert(Assigned(Action));
   Assert(Assigned(Node));
   if Assigned(Node.Left) then TraverseInOrder(Node.Left, Action);
-  if Action(Node) then exit;
+  if Action(Node) then Exit;
   if Assigned(Node.Right) then TraverseInOrder(Node.Right, Action);
 end;
 
-procedure TBinaryTreeBase<T>.TraverseReverseOrder(const Node: PNode; Action:
-  TNodePredicate);
+procedure TBinaryTreeBase<T>.TraverseReverseOrder(const Node: PNode; Action: TNodePredicate);
 begin
   Assert(Assigned(Action));
   Assert(Assigned(Node));
   if Assigned(Node.Right) then TraverseReverseOrder(Node.Right, Action);
-  if Action(Node) then exit;
+  if Action(Node) then Exit;
   if Assigned(Node.Left) then TraverseReverseOrder(Node.Left, Action);
 end;
 
@@ -1189,21 +1209,21 @@ begin
   Assert(Assigned(Node));
   if Assigned(Node.Left) then TraversePostOrder(Node.Left, Action);
   if Assigned(Node.Right) then TraversePostOrder(Node.Right, Action);
-  if Action(Node) then exit;
+  if Action(Node) then Exit;
 end;
 
 procedure TBinaryTreeBase<T>.TraversePreOrder(const Node: PNode; Action: TNodePredicate);
 begin
   Assert(Assigned(Action));
   Assert(Assigned(Node));
-  if Action(Node) then exit;
+  if Action(Node) then Exit;
   if Assigned(Node.Left) then TraversePreOrder(Node.Left, Action);
   if Assigned(Node.Right) then TraversePreOrder(Node.Right, Action);
 end;
 
 procedure TBinaryTreeBase<T>.Clear;
 begin
-  if (fCount = 0) then exit;
+  if (fCount = 0) then Exit;
   TraversePostOrder(Root,
     function(const Node: PNode): boolean
     begin
@@ -1219,13 +1239,13 @@ end;
 function TRedBlackTree<T>.Check: boolean;
 begin
   // Is this tree a red-black tree?
-  Result:= isBST and Is234 and IsBalanced;
+  Result:= IsBST and Is234 and IsBalanced;
 end;
 
 function TRedBlackTree<T>.IsBST: boolean;
 begin
   // Is this tree a BST?
-  if (Root = nil) then exit(true);
+  if (Root = nil) then Exit(true);
   Result:= IsBST(Root, First, Last);
 end;
 
@@ -1246,7 +1266,7 @@ end;
 function TRedBlackTree<T>.Is234(Node: PNode): boolean;
 begin
   if (Node = nil) then Exit(true);
-  if ((Node.Right.IsRed)) then Exit((fspecies = TD234) and (Node.Left.IsRed));
+  if ((Node.Right.IsRed)) then Exit((fSpecies = TD234) and (Node.Left.IsRed));
   if (not(Node.Right.IsRed)) then Exit(true);
   Result:= Is234(Node.Left) and Is234(Node.Right);
 end;
@@ -1263,17 +1283,17 @@ begin
     if (not(x.IsRed)) then Inc(BlackCount);
     x:= x.Left;
   end;
-  Result:= IsBalanced(Root, blackCount);
+  Result:= IsBalanced(Root, BlackCount);
 end;
 
-function TRedBlackTree<T>.IsBalanced(Node: PNode; Black: integer): boolean;
+function TRedBlackTree<T>.IsBalanced(Node: PNode; Black: Integer): boolean;
 begin
   // Does every path from the root to a leaf have the given number
   // of black links?
-  if (Node = nil) and (black = 0) then Exit(true)
-  else if (Node = nil) and (black <> 0) then Exit(false);
-  if (not(Node.IsRed)) then Dec(black);
-  Result:= IsBalanced(Node.Left, black) and IsBalanced(Node.Right, black);
+  if (Node = nil) and (Black = 0) then Exit(true)
+  else if (Node = nil) and (Black <> 0) then Exit(false);
+  if (not(Node.IsRed)) then Dec(Black);
+  Result:= IsBalanced(Node.Left, Black) and IsBalanced(Node.Right, Black);
 end;
 {$ENDIF}
 { TRedBlackTree<K>.TreeEnumerator }
@@ -1288,7 +1308,7 @@ end;
 
 function TBinaryTreeBase<T>.TTreeEnumerator.Clone: TIterator<T>;
 begin
-  Result:= TTreeEnumerator.Create(self.fHead, Self.fDirection);
+  Result:= TTreeEnumerator.Create(Self.fHead, Self.fDirection);
 end;
 
 constructor TBinaryTreeBase<T>.TTreeEnumerator.Create(const Head: PNode);
@@ -1302,8 +1322,7 @@ begin
   inherited;
 end;
 
-
-function TBinaryTreeBase<T>.TTreeEnumerator.MoveNext: Boolean;
+function TBinaryTreeBase<T>.TTreeEnumerator.MoveNext: boolean;
 var
   Node: PNode;
 begin
@@ -1321,12 +1340,12 @@ begin
     if (Node = nil) then begin
       fCurrentNode:= fStack.Pop;
       fCurrent:= fCurrentNode.Key;
-      exit(true);
+      Exit(true);
     end
     { otherwise, the children of the Node have not been pushed yet }
     else begin
       case fDirection of
-        FromBeginning:begin { push the Left child, if it's not nil }
+        FromBeginning: begin { push the Left child, if it's not nil }
           if (Node.Right <> nil) then fStack.Push(Node.Right);
           { push the Node, followed by a nil pointer }
           fStack.Push(Node);
@@ -1334,7 +1353,7 @@ begin
           { push the Right child, if it's not nil }
           if (Node.Left <> nil) then fStack.Push(Node.Left);
         end; { FromBeginning }
-        FromEnd:begin { push the Left child, if it's not nil }
+        FromEnd: begin { push the Left child, if it's not nil }
           if (Node.Left <> nil) then fStack.Push(Node.Left);
           { push the Node, followed by a nil pointer }
           fStack.Push(Node);
@@ -1358,7 +1377,7 @@ end;
 
 constructor TRedBlackTree<K, V>.Create(const Comparer: IComparer<K>; Species: TTreeSpecies);
 begin
-  fKeyComparer := TTreeComparer.Create(Comparer);
+  fKeyComparer:= TTreeComparer.Create(Comparer);
   inherited Create(fKeyComparer, Species);
   fValueComparer:= TComparer<V>.Default;
   fOnKeyChanged:= TCollectionChangedEventImpl<K>.Create;
@@ -1395,7 +1414,7 @@ procedure TRedBlackTree<K, V>.Add(const Key: K; const Value: V);
 var
   Pair: TPair;
 begin
-  //Pair:= TPair.Create(Key, Value);
+  // Pair:= TPair.Create(Key, Value);
   Pair.Key:= Key;
   Pair.Value:= Value;
   inherited Add(Pair);
@@ -1418,16 +1437,16 @@ begin
   Result:= Self as IReadOnlyDictionary<K, V>;
 end;
 
-function TRedBlackTree<K, V>.ContainsKey(const Key: K): Boolean;
+function TRedBlackTree<K, V>.ContainsKey(const Key: K): boolean;
 var
   DummyPair: TPair;
 begin
   DummyPair.Key:= Key;
-  DummyPair.Value:= Default(V);
+  DummyPair.Value:= default (V);
   Result:= Assigned(FindNode(Root, DummyPair));
 end;
 
-function TRedBlackTree<K, V>.ContainsValue(const Value: V): Boolean;
+function TRedBlackTree<K, V>.ContainsValue(const Value: V): boolean;
 begin
   Result:= Any(
     function(const Pair: TPair): boolean
@@ -1436,14 +1455,14 @@ begin
     end);
 end;
 
-function TRedBlackTree<K, V>.Contains(const Key: K; const Value: V): Boolean;
+function TRedBlackTree<K, V>.Contains(const Key: K; const Value: V): boolean;
 begin
-  Result := Assigned(FindNode(Root, TPair.Create(Key, Value)));
+  Result:= Assigned(FindNode(Root, TPair.Create(Key, Value)));
 end;
 
 function TRedBlackTree<K, V>.Extract(const Key: K): V;
 begin
-  Result := ExtractPair(Key).Value;
+  Result:= ExtractPair(Key).Value;
 end;
 
 function TRedBlackTree<K, V>.ExtractPair(const Key: K): TPair<K, V>;
@@ -1452,7 +1471,7 @@ var
   Node: PNode;
 begin
   DummyPair.Key:= Key;
-  DummyPair.Value:= Default(V);
+  DummyPair.Value:= default (V);
   Node:= FindNode(Root, DummyPair);
   if Assigned(Node) then Result:= Node.Key
   else raise EInvalidOperationException.CreateRes(@SSequenceContainsNoMatchingElement);
@@ -1467,7 +1486,7 @@ function TRedBlackTree<K, V>.GetItem(const Key: K): V;
 var
   Node: PNode;
 begin
-  Node:= FindNode(Root, Pair(Key, Default(V)));
+  Node:= FindNode(Root, Pair(Key, default (V)));
   if Assigned(Node) then Result:= Node.Key.Value
   else raise EInvalidOperationException.CreateRes(@SSequenceContainsNoMatchingElement);
 end;
@@ -1516,7 +1535,7 @@ begin
   Result:= TypeInfo(V);
 end;
 
-function TRedBlackTree<K, V>.Remove(const Key: K): Boolean;
+function TRedBlackTree<K, V>.Remove(const Key: K): boolean;
 var
   Pair: TPair;
 begin
@@ -1524,7 +1543,7 @@ begin
   Result:= inherited Remove(Pair);
 end;
 
-function TRedBlackTree<K, V>.Remove(const Key: K; const Value: V): Boolean;
+function TRedBlackTree<K, V>.Remove(const Key: K; const Value: V): boolean;
 var
   Pair: TPair;
 begin
@@ -1532,9 +1551,9 @@ begin
   Result:= inherited Remove(Pair);
 end;
 
-function TRedBlackTree<K, V>.Extract(const Key: K; const Value: V): TPair<K,V>;
+function TRedBlackTree<K, V>.Extract(const Key: K; const Value: V): TPair<K, V>;
 begin
-  Result := TPair.Create(Key, Value);
+  Result:= TPair.Create(Key, Value);
   inherited Remove(Result);
 end;
 
@@ -1549,7 +1568,7 @@ begin
   else raise EInvalidOperationException.CreateRes(@SSequenceContainsNoMatchingElement);
 end;
 
-function TRedBlackTree<K, V>.TryGetValue(const Key: K; out Value: V): Boolean;
+function TRedBlackTree<K, V>.TryGetValue(const Key: K; out Value: V): boolean;
 var
   Pair: TPair;
   Node: PNode;
@@ -1562,14 +1581,12 @@ end;
 
 function TRedBlackTree<K, V>.GetValueOrDefault(const Key: K): V;
 begin
-  if not TryGetValue(Key, Result) then
-    Result := default (V);
+  if not TryGetValue(Key, Result) then Result:= default (V);
 end;
 
-function TRedBlackTree<K, V>.GetValueOrDefault(const Key: K; const defaultValue: V): V;
+function TRedBlackTree<K, V>.GetValueOrDefault(const Key: K; const DefaultValue: V): V;
 begin
-  if not TryGetValue(Key, Result) then
-    Result := defaultValue;
+  if not TryGetValue(Key, Result) then Result:= DefaultValue;
 end;
 
 function TRedBlackTree<K, V>.Pair(const Key: K; const Value: V): TPair;
@@ -1577,19 +1594,17 @@ begin
   Result:= TPair.Create(Key, Value);
 end;
 
-procedure TRedBlackTree<K, V>.Traverse(Order: TraverseOrder; const Action:
-  TTraverseAction);
+procedure TRedBlackTree<K, V>.Traverse(Order: TraverseOrder; const Action: TTraverseAction);
 var
   ActionWrapper: TNodePredicate;
 begin
-  ActionWrapper :=
-    function(const Node: PNode): boolean
+  ActionWrapper:= function(const Node: PNode): boolean
     var
       Abort: boolean;
     begin
-      Abort := false;
+      Abort:= false;
       Action(Node.Key.Key, Node.Key.Value, Abort);
-      Result := Abort;
+      Result:= Abort;
     end;
 
   case Order of
@@ -1597,7 +1612,7 @@ begin
     TraverseOrder.PreOrder: TraversePreOrder(Root, ActionWrapper);
     TraverseOrder.PostOrder: TraversePostOrder(Root, ActionWrapper);
     TraverseOrder.ReverseOrder: TraverseReverseOrder(Root, ActionWrapper);
-    else raise EInvalidOperationException.Create('Unsupported traverse order');
+  else raise EInvalidOperationException.Create('Unsupported traverse order');
   end;
 end;
 
@@ -1626,9 +1641,8 @@ begin
   inherited;
 end;
 
-
-//Todo: implement addition code.
-function TNAryTree<K, V>.Add(const Key: TPair<K,V>): boolean;
+// Todo: implement addition code.
+function TNAryTree<K, V>.Add(const Key: TPair<K, V>): boolean;
 begin
   fRoot:= InternalInsert(fRoot, Key);
 end;
@@ -1638,41 +1652,40 @@ begin
   fRoot:= InternalInsert(fRoot, Key, Value);
 end;
 
-
 function TNAryTree<K, V>.Get(Key: K): TPair<K, V>;
 var
   Node: PNode;
 begin
-  Node:= FindNode(Root, Pair(Key, Default(V)));
+  Node:= FindNode(Root, Pair(Key, default (V)));
   Result:= Node.Key;
 end;
 
 function TNAryTree<K, V>.GetDirectChildern(const ParentKey: K): TArray<TPair<K, V>>;
 var
   Node, Parent: PNode;
-  Count, Index: integer;
+  Count, Index: Integer;
 begin
-  Parent:= FindNode(Root, Pair(ParentKey, Default(V)));
+  Parent:= FindNode(Root, Pair(ParentKey, default (V)));
   Count:= 0;
   Node:= Parent.Left;
   while Node <> nil do begin
     Inc(Count);
     Node:= Node.Right;
-  end; {while}
+  end; { while }
   SetLength(Result, Count);
-  Index:= 0;
+  index:= 0;
   Node:= Parent.Left;
   while Node <> nil do begin
-    Result[Index]:= Node.Key;
-    Inc(Index);
+    Result[index]:= Node.Key;
+    Inc(index);
     Node:= Node.Right;
-  end; {while}
+  end; { while }
 end;
 
-function TNAryTree<K,V>.InternalInsert(Head: PNode; const Key: K; const Value: V): PNode;
+function TNAryTree<K, V>.InternalInsert(Head: PNode; const Key: K; const Value: V): PNode;
 begin
   if Head = nil then begin
-    Exit(NewNode(Pair(Key,Value), nil));
+    Exit(NewNode(Pair(Key, Value), nil));
   end;
 
   if Equal(Key, Head.Key.Key) then raise EInvalidOperationException.CreateRes(@SSetDuplicateInsert)
@@ -1685,8 +1698,7 @@ begin
   Result:= Head;
 end;
 
-
-{TTree<K>}
+{ TTree<K> }
 
 procedure TTree<T>.ExceptWith(const Other: IEnumerable<T>);
 var
@@ -1718,7 +1730,7 @@ begin
   end;
 end;
 
-function TTree<T>.IsSubsetOf(const Other: IEnumerable<T>): Boolean;
+function TTree<T>.IsSubsetOf(const Other: IEnumerable<T>): boolean;
 var
   Element: T;
 begin
@@ -1729,7 +1741,7 @@ begin
   Result:= true;
 end;
 
-function TTree<T>.IsSupersetOf(const Other: IEnumerable<T>): Boolean;
+function TTree<T>.IsSupersetOf(const Other: IEnumerable<T>): boolean;
 var
   Element: T;
 begin
@@ -1740,13 +1752,13 @@ begin
   Result:= true;
 end;
 
-function TTree<T>.SetEquals(const Other: IEnumerable<T>): Boolean;
+function TTree<T>.SetEquals(const Other: IEnumerable<T>): boolean;
 begin
   if (Other = nil) then ArgumentNilError('SetEquals');
   Result:= IsSubsetOf(Other) and IsSupersetOf(Other);
 end;
 
-function TTree<T>.Overlaps(const Other: IEnumerable<T>): Boolean;
+function TTree<T>.Overlaps(const Other: IEnumerable<T>): boolean;
 var
   Element: T;
 begin
@@ -1761,25 +1773,25 @@ procedure TBinaryTreeBase<T>.ExpandStorage(OldCount: NativeUInt);
 var
   Index: TBucketIndex;
 begin
-  Index:= BucketIndex(OldCount);
-  SetLength(fStorage, Index.Key + 1);
-  SetLength(fStorage[Index.Key], cBucketSize);
+  index:= BucketIndex(OldCount);
+  SetLength(fStorage, index.Key + 1);
+  SetLength(fStorage[index.Key], cBucketSize);
 end;
 
 function TBinaryTreeBase<T>.NewNode(const Key: T; Parent: PNode): PNode;
 var
   Index: TBucketIndex;
 begin
-  Index:= BucketIndex(fCount);
-  if (Index.Value = 0) then begin
-    //we do not test for Out of Memory. If it occurs here that's fine.
+  index:= BucketIndex(fCount);
+  if (index.Value = 0) then begin
+    // we do not test for Out of Memory. If it occurs here that's fine.
     ExpandStorage(fCount);
   end;
-  //An Index.Value = 0 means insert it at the beginning of a bucket.
-  //This is fine we just added a bucket.
-  //The Key is the index of the bucket, which will also will be correct
-  //when we just added a bucket.
-  Result:= @fStorage[Index.Key,Index.Value];
+  // An Index.Value = 0 means insert it at the beginning of a bucket.
+  // This is fine we just added a bucket.
+  // The Key is the index of the bucket, which will also will be correct
+  // when we just added a bucket.
+  Result:= @fStorage[index.Key, index.Value];
   Result.fLeft:= nil;
   Result.fRight:= nil;
   Result.SetParent(Parent);
@@ -1788,34 +1800,31 @@ begin
   Inc(fCount);
 end;
 
-procedure TBinaryTreeBase<T>.Traverse(Order: TraverseOrder; const Action:
-  TTraverseAction);
+procedure TBinaryTreeBase<T>.Traverse(Order: TraverseOrder; const Action: TTraverseAction);
 var
   ActionWrapper: TNodePredicate;
 begin
-  ActionWrapper :=
-    function (const Node: PNode): boolean
+  ActionWrapper:= function(const Node: PNode): boolean
     var
       Abort: boolean;
     begin
-      Abort := false;
+      Abort:= false;
       Action(Node.Key, Abort);
-      Result := Abort;
+      Result:= Abort;
     end;
 
   case Order of
-    TraverseOrder.PreOrder:     TraversePreOrder(Root, ActionWrapper);
-    TraverseOrder.InOrder:      TraverseInOrder(Root, ActionWrapper);
-    TraverseOrder.PostOrder:    TraversePostOrder(Root, ActionWrapper);
+    TraverseOrder.PreOrder: TraversePreOrder(Root, ActionWrapper);
+    TraverseOrder.InOrder: TraverseInOrder(Root, ActionWrapper);
+    TraverseOrder.PostOrder: TraversePostOrder(Root, ActionWrapper);
     TraverseOrder.ReverseOrder: TraverseReverseOrder(Root, ActionWrapper);
-    else raise EInvalidOperationException.CreateRes(@SInvalidTraverseOrder);
+  else raise EInvalidOperationException.CreateRes(@SInvalidTraverseOrder);
   end;
 end;
 
 procedure TTree<T>.ArgumentNilError(const MethodName: string);
 begin
-  raise EArgumentNullException.Create(Self.ClassName + MethodName +
-    ' does not accept a nil argument');
+  raise EArgumentNullException.Create(Self.ClassName + MethodName + ' does not accept a nil argument');
 end;
 
 procedure TTree<T>.AddInternal(const Item: T);
@@ -1843,32 +1852,52 @@ end;
 
 function TBinaryTreeBase<K, V>.Pair(const Key: K; const Value: V): TPair;
 begin
-  Result := TPair.Create(Key, Value);
+  Result:= TPair.Create(Key, Value);
 end;
 
-procedure TBinaryTreeBase<K, V>.Traverse(Order: TraverseOrder;
-  const Action: TTraverseAction);
+procedure TBinaryTreeBase<K, V>.Traverse(Order: TraverseOrder; const Action: TTraverseAction);
 var
   ActionWrapper: TNodePredicate;
 begin
   Assert(Assigned(Action));
-  ActionWrapper :=
-    function (const Node: PNode): boolean
+  ActionWrapper:= function(const Node: PNode): boolean
     var
       Abort: boolean;
     begin
-      Abort := false;
+      Abort:= false;
       Action(Node.Key.Key, Node.Key.Value, Abort);
-      Result := Abort;
+      Result:= Abort;
     end;
 
-  case order of
-    TraverseOrder.PreOrder:     TraversePreOrder(Root, ActionWrapper);
-    TraverseOrder.InOrder:      TraverseInOrder(Root, ActionWrapper);
-    TraverseOrder.PostOrder:    TraversePostOrder(Root, ActionWrapper);
+  case Order of
+    TraverseOrder.PreOrder: TraversePreOrder(Root, ActionWrapper);
+    TraverseOrder.InOrder: TraverseInOrder(Root, ActionWrapper);
+    TraverseOrder.PostOrder: TraversePostOrder(Root, ActionWrapper);
     TraverseOrder.ReverseOrder: TraverseReverseOrder(Root, ActionWrapper);
-    else raise EInvalidOperationException.CreateRes(@SInvalidTraverseOrder);
+  else raise EInvalidOperationException.CreateRes(@SInvalidTraverseOrder);
   end;
 end;
+
+{ TAVLTree<T>.TAVLNodeHelper }
+
+//function TAVLTree<T>.TAVLNodeHelper.GetBalance: TBalance;
+//begin
+//  Result:= TBalance(Self.fIsBlack);
+//end;
+//
+//function TAVLTree<T>.TAVLNodeHelper.GetCount: NativeInt;
+//begin
+//
+//end;
+//
+//procedure TAVLTree<T>.TAVLNodeHelper.SetBalance(const Value: TBalance);
+//begin
+//  TBalance(Self.fIsBlack):= Value;
+//end;
+//
+//function TAVLTree<T>.TAVLNodeHelper.TreeDepth: NativeInt;
+//begin
+//
+//end;
 
 end.
