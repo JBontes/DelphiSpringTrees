@@ -1179,7 +1179,7 @@ begin
     else Node.Parent.Right:= nil;
   end;
   if (fCount > 1) then begin
-    index:= BucketIndex(fCount);
+    index:= BucketIndex(fCount-1);
     Move(fStorage[index.Key, index.Value], Node^, SizeOf(TNode));
   end;
   Dec(fCount);
