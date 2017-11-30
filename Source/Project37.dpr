@@ -8,51 +8,36 @@ uses
   System.SysUtils,
   System.Generics.Defaults,
   System.Generics.Collections,
-  Spring.Collections.Trees in 'Spring.Collections.Trees.pas';
+  Spring.Collections.Trees in 'Spring.Collections.Trees.pas',
+  TreeTests in 'TreeTests.pas',
+  DUnitX.TestFrameWork,
+  DUnitX.Loggers.Console,
+  Spring.Collections.TreeImpl in 'Spring.Collections.TreeImpl.pas',
+  Spring.Collections.TreeIntf in 'Spring.Collections.TreeIntf.pas',
+  RedBlack in 'RedBlack.pas';
 
 var
-  Tree: TRedBlackTree<string>;
-  t1: TRedBlackTree<integer,string>;
-
-  function Equals(const p1, p2: TPair<integer,string>): boolean;
-  begin
-    Result := (p1.Key = p2.Key) and (p1.Value = p2.Value);
-  end;
-
+  runner : ITestRunner;
+  results : IRunResults;
+  logger : ITestLogger;
 begin
-  Tree:= TRedBlackTree<string>.Create;
-  Tree.Add('bbb');
-  Tree.Add('aaa');
-  Tree.Add('ccc');
-  Assert(Tree.First = 'aaa');
-  Assert(Tree.Last = 'ccc');
-  Tree.Add('aa');
-  Assert(Tree.First = 'aa');
-  Tree.Traverse(TraverseOrder.InOrder,
-    procedure (const key: string; var abort: boolean)
-    begin
-      Writeln(key);
-    end);
-  Tree.Free;
+  try
+    //Create the runner
+    runner := TDUnitX.CreateRunner;
+    runner.UseRTTI := True;
+    //tell the runner how we will log things
+    logger := TDUnitXConsoleLogger.Create(true);
+    //nunitLogger := TDUnitXXMLNUnitFileLogger.Create;
+    runner.AddLogger(logger);
+    //runner.AddLogger(nunitLogger);
 
-  Writeln;
+    //Run tests
+    results := runner.Execute;
 
-  t1 := TRedBlackTree<integer,string>.Create;
-  t1.Add(1, 'aaa');
-  t1.Add(2, 'zzz');
-  t1.Add(3, 'ccc');
-  Assert(Equals(t1.First, TPair<integer,string>.Create(1,'aaa')));
-  Assert(Equals(t1.Last, TPair<integer,string>.Create(3,'ccc')));
-  t1.Add(0, 'ZZZ');
-  Assert(Equals(t1.First, TPair<integer,string>.Create(0,'ZZZ')));
-  Assert(t1.ContainsKey(2));
-  Assert(t1[3] = 'ccc');
-  t1.Traverse(TraverseOrder.ReverseOrder,
-    procedure (const key: integer; const value: string; var abort: boolean)
-    begin
-      Writeln(key, ':', value);
-    end);
-  t1.Free;
-
-  Readln;
+    System.Write('Done.. press <Enter> key to quit.');
+    System.Readln;
+  except
+    on E: Exception do
+      System.Writeln(E.ClassName, ': ', E.Message);
+  end;
 end.
