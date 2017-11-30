@@ -4,7 +4,6 @@ interface
 
 uses
   DUnitX.TestFramework,
-  DUnitX.Loggers.Console,
   Spring.Collections.TreeIntf,
   Spring.Collections.Trees;
 
@@ -13,7 +12,6 @@ type
   TestTreesInteger = class(TObject)
   strict private
     FTree: ITree<integer>;
-    ConsoleLogger: TDUnitXConsoleLogger;
   public
     [Setup]
     procedure Setup;
@@ -34,7 +32,7 @@ type
     [TestCase('Enumerate100','100')]
     [TestCase('Enumerate1000','1024')]
     procedure Enumerate(Count: Integer);
-    [TestCase('SpeedTest16000','16000')]
+    [TestCase('SpeedTest16000','160000')]
     procedure SpeedTest(Count: Integer);
   end;
 
@@ -191,8 +189,6 @@ end;
 
 procedure TestTreesInteger.Setup;
 begin
-  ConsoleLogger:= TDUnitXConsoleLogger.Create(false);
-  ConsoleLogger.WriteLn('Start');
   FTree:= Tree<Integer>.RedBlackTree;
 end;
 
@@ -203,12 +199,15 @@ var
   Data: TArray<integer>;
   Ticks: cardinal;
 begin
+  System.Writeln;
+  System.Writeln('Start speedtest: add/remove '+Count.ToString+' items');
   Ticks:= TThread.GetTickCount;
   SetLength(Data, Count);
   for i:= 0 to Count - 1 do begin
     Data[i]:= i;
     FTree.Add(Data[i]);
   end;
+  System.Writeln('Adding done');
   //Shuffle the items
   for i:= 0 to Count -1 do begin
     r:= Random(Count);
@@ -216,17 +215,17 @@ begin
     Data[i]:= Data[r];
     Data[r]:= a;
   end;
+  System.Writeln('Shuffling done');
   for i:= 0 to Count -1 do begin
     FTree.Remove(Data[i]);
   end;
-  ConsoleLogger.WriteLn('Adding and removing '+Count.ToString + 'elements took '+(TThread.GetTickCount - Ticks).ToString+' ticks');
+  System.WriteLn('Adding and removing '+Count.ToString + ' elements took '+(TThread.GetTickCount - Ticks).ToString+' ticks');
   Assert.IsTrue(FTree.Count = 0);
 end;
 
 procedure TestTreesInteger.TearDown;
 begin
   FTree:= nil;
-  ConsoleLogger.Free;
 end;
 
 
