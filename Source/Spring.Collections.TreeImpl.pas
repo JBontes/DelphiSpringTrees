@@ -25,9 +25,19 @@ unit Spring.Collections.TreeImpl;
 {                                                                             }
 { *************************************************************************** }
 
-// Adds left leaning red black trees to the spring framework.
-// Based on Sedgewick's 2008 paper where he proposes an improvement to the
-// his 1978 Red Black trees.
+// Adds red black trees to the spring framework.
+// Core Red black tree code is an adoptation of code (c) 2017 Lukas Barth,
+// released under the MIT License under the following terms:
+//
+//Permission is hereby granted, free of charge, to any person obtaining a copy
+//of this software and associated documentation files (the "Software"), to deal
+//in the Software without restriction, including without limitation the rights
+//to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+//copies of the Software, and to permit persons to whom the Software is
+//furnished to do so, subject to the following conditions:
+//
+//The above copyright notice and this permission notice shall be included in all
+//copies or substantial portions of the Software.
 // Data is stored in sized sized buckets (dynamic arrays)
 // The buckets are kept in a dynamic array.
 // When a element is added, it will always be added to the top free item in the
@@ -49,8 +59,8 @@ uses
   Spring,
   Spring.Collections,
   Spring.Collections.Base,
-  Spring.Collections.TreeIntf,
-  Spring.Collections.MiniStacks;
+  Spring.Collections.TreeIntf;
+  //Spring.Collections.MiniStacks;
 
 type
 {$REGION 'TTree<T>'}
@@ -199,18 +209,16 @@ type
     /// <i>Other</i> is <b>nil</b>.
     /// </exception>
     function Overlaps(const Other: IEnumerable<T>): boolean; virtual;
+    procedure Traverse(Order: TTraverseOrder; const Action: TTraverseAction<T>); virtual; abstract;
   end;
 {$ENDREGION}
-{$SCOPEDENUMS ON}
 
-  TraverseOrder = (PreOrder, InOrder, ReverseOrder, PostOrder);
-{$SCOPEDENUMS OFF}
 {$REGION 'TBinaryTreeBase<T>'}
 
   TBinaryTreeBase<T> = class(TTree<T>)
   private const
 {$IFDEF debug}
-    cBucketSize = 16;
+    cBucketSize = 1024;
 {$ELSE}
     cBucketSize = 1024;
 {$ENDIF}
@@ -227,7 +235,7 @@ type
       fRight: PNode; // Right nodes hold higher values
       fKey: T; // The payload, use a TPair<K,V> to store a Key/Value pair.
     public //Allow fIsBlack to be repurposed
-      fIsBlack: boolean; // Red is the default.
+      fIsBlack: Boolean; // Red is the default.
     private
       /// <summary>
       /// Static method to get the color. Always use this method, never read the
@@ -251,11 +259,12 @@ type
       /// Everywhere else SetLeft/SetRight will set the correct parent.
       /// </summary>
       procedure SetParent(const Value: PNode); inline;
-      property NodeColor: boolean read fIsBlack write fIsBlack;
+      function Uncle: PNode;
+      property NodeColor: Boolean read fIsBlack write fIsBlack;
     public
-      property Left: PNode read fLeft write SetLeft;
-      property Right: PNode read fRight write SetRight;
-      property Parent: PNode read fParent;
+      property Left: PNode read fLeft write fLeft;
+      property Right: PNode read fRight write fRight;
+      property Parent: PNode read fParent write fParent;
       property Key: T read fKey; // write fKey;
     end;
   private type
@@ -264,16 +273,15 @@ type
     /// </summary>
     TTreeEnumerator = class(TIterator<T>)
     private
-      fHead: PNode;
+      fTree: TBinaryTreeBase<T>;
       fCurrentNode: PNode;
-      fStack: TMiniStack<PNode>;
       // Enumerator can be reversed.
       fDirection: TDirection;
     protected
       // function GetCurrentNonGeneric: V; override;
       function Clone: TIterator<T>; override;
-      constructor Create(const Head: PNode; Direction: TDirection); overload;
-      constructor Create(const Head: PNode); overload;
+      constructor Create(const Tree: TBinaryTreeBase<T>; Direction: TDirection); overload;
+      constructor Create(const Tree: TBinaryTreeBase<T>); overload;
     public
       destructor Destroy; override;
       procedure Reset; override;
@@ -287,7 +295,7 @@ type
     TNodePredicate = TPredicate<PNode>;
   strict private
     // Disable the default constructor.
-    constructor Create;
+    constructor Create; override;
   protected type
     TBucketIndex = TPair<NativeUInt, NativeUInt>;
   protected
@@ -304,17 +312,21 @@ type
   private
     fRoot: PNode;
     fCount: Integer;
+    procedure SetRoot(const Value: PNode); inline;
     procedure TraversePreOrder(const Node: PNode; Action: TNodePredicate);
     procedure TraversePostOrder(const Node: PNode; Action: TNodePredicate);
     procedure TraverseInOrder(const Node: PNode; Action: TNodePredicate);
     procedure TraverseReverseOrder(const Node: PNode; Action: TNodePredicate);
     /// <summary>
-    /// Convienance method to see if two keys are equal.
+    ///  Convienance method to see if two keys are equal.
     /// </summary>
     function Equal(const A, B: T): boolean; inline;
     /// <summary>
-    /// Convienance method to see if (a < b).
+    ///  Convienance method to see if (a < b).
     /// </summary>
+    /// <returns>
+    ///  True if A < B, False if A >= B
+    /// </returns>
     function Less(const A, B: T): boolean; inline;
     /// <summary>
     /// Finds the Node containing the Key in the given subtree.
@@ -332,21 +344,33 @@ type
     /// Should perhaps be more intelligent when the tree is expanding fast?
     /// </summary>
     procedure ExpandStorage(OldCount: NativeUInt);
+    function NextNode(const Node: PNode): PNode;
+    /// <summary>
+    /// Get the leftmost (smallest Node) in the given subtree.
+    /// </summary>
+    /// <param name="Head">The head of the subtree, must not be nil</param>
+    /// <returns>The leftmost (smallest) Node in the subtree</returns>
+    function MinNode(const Head: PNode): PNode;
+    /// <summary>
+    /// Get the rightmost (largest Node) in the given subtree.
+    /// </summary>
+    /// <param name="Head">The head of the subtree, must not be nil</param>
+    /// <returns>The rightmost (largest) Node in the subtree</returns>
+    function MaxNode(const Head: PNode): PNode;
+    function PreviousNode(const Node: PNode): PNode;
 
-    property Root: PNode read fRoot;
-  public type
-    TTraverseAction = reference to procedure(const Key: T; var Abort: boolean);
+    property Root: PNode read fRoot write SetRoot;
   public
     function Add(const Item: T): boolean; override;
     function Contains(const Key: T): boolean; override;
     procedure Clear; override;
     property Count: Integer read fCount;
-    procedure Traverse(Order: TraverseOrder; const Action: TTraverseAction);
+    procedure Traverse(Order: TTraverseOrder; const Action: TTraverseAction<T>); override;
   end;
 {$ENDREGION}
 {$REGION 'TBinaryTreeBase<K,V>'}
 
-  TBinaryTreeBase<K, V> = class(TBinaryTreeBase < TPair < K, V >> )
+  TBinaryTreeBase<K, V> = class(TBinaryTreeBase<TPair<K, V>>)
   protected type
     TPair = TPair<K, V>;
   private type
@@ -362,7 +386,6 @@ type
     function Pair(const Key: K; const Value: V): TPair; inline;
     class property KeyComparer: IComparer<K> read GetKeyComparer;
   public
-    procedure Traverse(Order: TraverseOrder; const Action: TTraverseAction);
   end;
 {$ENDREGION}
 {$REGION 'TNAryTree<K,V>'}
@@ -397,7 +420,7 @@ type
     function GetDirectChildern(const ParentKey: K): TArray<TPair<K, V>>;
   end;
 {$ENDREGION}
-{$REGION 'TRedBlackTree<T>'}
+
 
 //{$REGION 'TAVLTree<T>'}
 //  TAVLTree<T> = class(TBinaryTreeBase<T>)
@@ -430,7 +453,8 @@ type
   /// Left Leaning red black tree, mainly useful for encaplating a Set.
   /// Does not allow duplicate items.
   /// </summary>
-  TRedBlackTree<T> = class(TBinaryTreeBase<T>)
+{$REGION 'TRedBlackTree<T>'}
+  TRedBlackTree<T> = class(TBinaryTreeBase<T>{$ifdef debug}, ITreeDebug{$endif})
   private type
     PNode = ^TNode;
     TNode = TBinaryTreeBase<T>.TNode;
@@ -441,21 +465,15 @@ type
     // For some problem domains the 23 runs faster than the 234
     // For Other problems the 234 is faster.
     fSpecies: TTreeSpecies;
-{$IF defined(debug)}
-  private // Test methods
-    function Is234(Node: PNode): boolean; overload; virtual;
-    function IsBST(Node: PNode; MinKey, MaxKey: T): boolean; overload; virtual;
-    function IsBalanced(Node: PNode; Black: Integer): boolean; overload; virtual;
-{$ENDIF}
   private
     /// <summary>
     /// Deletes the rightmost child of Start Node, retaining the RedBlack property
     /// </summary>
-    function DeleteMax(Head: PNode): PNode; overload;
+    //function DeleteMax(Head: PNode): PNode; overload;
     /// <summary>
     /// Deletes the leftmost child of Start Node, retaining the RedBlack property
     /// </summary>
-    function DeleteMin(Head: PNode): PNode; overload;
+    //function DeleteMin(Head: PNode): PNode; overload;
     /// <summary>
     /// Deletes the Node with the given Key inside the subtree under Start
     /// </summary>
@@ -469,7 +487,7 @@ type
     /// the Start Node as its result.
     /// Examine the Count property to see if a Node was deleted.
     /// </remarks>
-    function DeleteNode(Head: PNode; Key: T): PNode; overload;
+    //function DeleteNode(Head: PNode; Key: T): PNode; overload;
 
     /// <summary>
     /// Inserts a Node into the subtree anchored at Start.
@@ -492,43 +510,54 @@ type
     /// </summary>
     /// <param name="Node"></param>
     /// <returns></returns>
-    function FixUp(Node: PNode): PNode;
+    //function FixUp(Node: PNode): PNode;
     /// <summary>
     /// Inverts the color of a 3-Node and its immediate childern.
     /// </summary>
     /// <param name="Head"></param>
-    procedure ColorFlip(const Node: PNode);
+    //procedure ColorFlip(const Node: PNode);
     /// <summary>
     /// Assuming that Node is red and both Node.left and Node.left.left
     /// are black, make Node.left or one of its children red.
     /// </summary>
-    function MoveRedLeft(Node: PNode): PNode;
+    //function MoveRedLeft(Node: PNode): PNode;
     /// <summary>
     /// Assuming that Node is red and both Node.right and Node.right.left
     /// are black, make Node.right or one of its children red.
     /// </summary>
-    function MoveRedRight(Node: PNode): PNode;
+    //function MoveRedRight(Node: PNode): PNode;
     /// <summary>
     /// Make a right-leaning 3-Node lean to the left.
     /// </summary>
-    function RotateLeft(Node: PNode): PNode;
+    //function RotateLeft(Node: PNode): PNode;
     /// <summary>
     /// Make a left-leaning 3-Node lean to the right.
     /// </summary>
-    function RotateRight(Node: PNode): PNode;
-
-    /// <summary>
-    /// Get the leftmost (smallest Node) in the given subtree.
-    /// </summary>
-    /// <param name="Head">The head of the subtree, must not be nil</param>
-    /// <returns>The leftmost (smallest) Node in the subtree</returns>
-    function MinNode(const Head: PNode): PNode;
-    /// <summary>
-    /// Get the rightmost (largest Node) in the given subtree.
-    /// </summary>
-    /// <param name="Head">The head of the subtree, must not be nil</param>
-    /// <returns>The rightmost (largest) Node in the subtree</returns>
-    function MaxNode(const Head: PNode): PNode;
+    //function RotateRight(Node: PNode): PNode;
+    //function DoInsert(Head: PNode; const Key: T): PNode;
+    //procedure FixUpAfterInsert(NewNode: PNode);
+  private
+    procedure rbFixupAfterDelete(Parent: PNode; DeletedLeft: Boolean);
+    procedure rbFixupAfterInsert(Node: PNode);
+    //procedure rbInsert(const Key: T); overload; inline;
+    //procedure rbInsert(const Key: T; Hint: PNode); overload;
+    //procedure rbInsert(const Key: T; Start: PNode); overload; inline;
+    function rbInsertBase(const Key: T; Start: PNode; BaisedLeft: Boolean): PNode;
+    //procedure rbInsertRightBiased(const Key: T; Start: PNode); inline;
+    //procedure rbRemove(Node: PNode); inline;
+    procedure rbRemoveNode(Node: PNode);
+    procedure rbRotateLeft(Parent: PNode);
+    procedure rbRotateRight(Parent: PNode);
+    procedure rbSwapNeighbors(Parent, Child: PNode);
+    procedure rbSwapNodes(n1, n2: PNode; SwapColors: Boolean);
+    procedure rbSwapUnrelatedNodes(n1, n2: PNode);
+    //TestMethods
+    function VerifyBlackPaths(const Node: PNode; var PathLength: NativeUInt): Boolean;
+    function VerifyBlackRoot: Boolean; inline;
+    function VerifyIntegrity: Boolean;
+    function VerifyOrder: Boolean;
+    function VerifyRedBlack(const Node: PNode): Boolean;
+    function VerifyTree: Boolean;
   protected
     constructor Create(Species: TTreeSpecies = TD234); reintroduce; overload;
     constructor Create(const Comparer: IComparer<T>; Species: TTreeSpecies = TD234); reintroduce; overload;
@@ -539,13 +568,6 @@ type
   public
     function GetEnumerator: IEnumerator<T>; override;
     function Reversed: IEnumerable<T>; override;
-{$IF defined(Debug)}
-  public // Test Methods
-    function Is234: boolean; overload;
-    function IsBST: boolean; overload;
-    function IsBalanced: boolean; overload;
-    function Check: boolean;
-{$ENDIF}
   public
     function Last: T; overload; override;
     function Last(const Predicate: TPredicate<T>): T; overload;
@@ -725,8 +747,6 @@ type
 
     function AsReadOnlyDictionary: IReadOnlyDictionary<K, V>;
 
-    procedure Traverse(Order: TraverseOrder; const Action: TTraverseAction);
-
     /// <summary>
     /// Gets or sets the element with the specified Key.
     /// </summary>
@@ -801,6 +821,15 @@ begin
   if Assigned(Value) then Value.fParent:= @Self;
 end;
 
+procedure TBinaryTreeBase<T>.SetRoot(const Value: PNode);
+begin
+  fRoot := Value;
+  if (Assigned(Value)) then begin
+    fRoot.SetParent(nil);
+    fRoot.NodeColor:= Color.Black;
+  end;
+end;
+
 function TBinaryTreeBase<T>.BucketIndex(Index: NativeUInt): TBucketIndex;
 begin
   Result.Key:= index div NativeUInt(cBucketSize);
@@ -837,6 +866,587 @@ begin
   AddRange(Values);
 end;
 
+function TRedBlackTree<T>.rbInsertBase(const Key: T; Start: PNode; BaisedLeft: Boolean): PNode;
+const
+  AllowDuplicates = false;
+var
+  Parent, Cur: PNode;
+begin
+  Parent := Start;
+  Cur := Start;
+
+  while (Cur <> nil) do begin
+    Parent := Cur;
+
+	  if (BaisedLeft) then begin
+      if (Comparer.Compare(Key, Cur.Key) > 0) then Cur := Cur.Right
+      else Cur := Cur.Left;
+    end else begin
+      if (Comparer.Compare(Cur.Key, Key) > 0) then Cur := Cur.Left
+      else Cur := Cur.Right;
+    end;
+  end;
+
+  if (Parent = nil) then begin
+    // new root!
+    Root := NewNode(Key, nil);
+    Result:= Root;
+  end else begin
+    if not(AllowDuplicates) and (Comparer.Compare(Key, Parent.Key) = 0) then begin
+      raise EInvalidOperationException.CreateRes(@SSetDuplicateInsert);
+    end;
+
+    Result:= NewNode(Key, Parent);
+
+    if (Comparer.Compare(Parent.Key, Key) > 0) then Parent.Left := Result
+    else if (Comparer.Compare(Key, Parent.Key) > 0) then Parent.Right := Result
+    else begin
+	    if (BaisedLeft) then Parent.Left := Result
+      else Parent.Right := Result;
+    end;
+
+    rbFixupAfterInsert(Result);
+  end;
+end;
+
+procedure TRedBlackTree<T>.rbRotateLeft(Parent: PNode);
+var
+  RightChild: PNode;
+begin
+  RightChild := Parent.Right;
+  Parent.Right := RightChild.Left;
+  if (RightChild.Left <> nil) then begin
+    RightChild.Left.Parent := Parent;
+  end;
+
+  RightChild.Left := Parent;
+  RightChild.Parent := Parent.Parent;
+
+  if (Parent <> Root) then begin
+    if (Parent.Parent.Left = Parent) then Parent.Parent.Left := RightChild
+    else Parent.Parent.Right := RightChild;
+  end else begin
+    Root := RightChild;
+  end;
+
+  Parent.Parent := RightChild;
+end;
+
+procedure TRedBlackTree<T>.rbRotateRight(Parent: PNode);
+var
+  LeftChild: PNode;
+begin
+  LeftChild := Parent.Left;
+  Parent.Left := LeftChild.Right;
+  if (LeftChild.Right <> nil) then LeftChild.Right.Parent := Parent;
+
+  LeftChild.Right := Parent;
+  LeftChild.Parent := Parent.Parent;
+
+  if (Parent <> Root) then begin
+    if (Parent.Parent.Left = Parent) then Parent.Parent.Left := LeftChild
+    else Parent.Parent.Right := LeftChild
+  end else Root := LeftChild;
+
+  Parent.Parent := LeftChild;
+end;
+
+procedure TRedBlackTree<T>.rbFixupAfterInsert(Node: PNode);
+var
+  Parent: PNode;
+  GrandParent: PNode;
+begin
+  //The root is never red. If the Parent is red, it must be below the root.
+  //Also red nodes are always assigned
+  while ((Node.Parent.IsRed) and (Node.Uncle.IsRed)) do begin
+    Node.Parent.NodeColor := Color.Black;
+    Node.Uncle.NodeColor := Color.Black;
+
+    if (Node.Parent.Parent <> Root) then begin // never iterate into the root
+      Node.Parent.Parent.NodeColor := Color.Red;
+      Node := Node.Parent.Parent;
+    end else begin
+      // Don't recurse into the root.
+      Exit;
+    end;
+  end;
+
+  if (Node.Parent.NodeColor = Color.Black) then Exit;
+
+  Parent := Node.Parent;
+  Assert(Assigned(Parent)); //The root is never red, so the grandparent is always valid.
+  GrandParent := Parent.Parent;
+
+  if (GrandParent.Left = Parent) then begin
+    if (Parent.Right = Node) then begin
+      // 'folded in' situation
+      rbRotateLeft(Parent);
+      Node.NodeColor := Color.Black;
+    end else begin
+      // 'straight' situation
+      Parent.NodeColor := Color.Black;
+    end;
+	  rbRotateRight(GrandParent);
+  end else begin
+    //GrandParent.Right = Parent
+    if (Parent.Left = Node) then begin
+      // 'folded in'
+      rbRotateRight(Parent);
+      Node.NodeColor := Color.Black;
+    end else begin
+      // 'straight'
+      Parent.NodeColor := Color.Black;
+    end;
+    rbRotateLeft(GrandParent);
+  end;
+
+  GrandParent.NodeColor := Color.Red;
+end;
+
+function TRedBlackTree<T>.VerifyBlackRoot: boolean;
+begin
+  //The root must be black.
+  Result:= (Root = nil) or (Root.NodeColor = Color.Black);
+end;
+
+function TRedBlackTree<T>.VerifyBlackPaths(const Node: PNode; var PathLength: NativeUInt): boolean;
+var
+  LeftLength, RightLength: NativeUInt;
+begin
+  //All nodes must have the same number of black non-nil children.
+  if (Node.Left = nil) then LeftLength := 0
+  else if not(VerifyBlackPaths(Node.Left, LeftLength)) then Exit(False);
+
+  if (Node.Right = nil) then RightLength := 0
+  else if (not VerifyBlackPaths(Node.Right, RightLength)) then Exit(False);
+
+  if (LeftLength <> RightLength) then begin
+    Exit(False);
+  end;
+
+  if (Node.NodeColor = Color.Black) then PathLength := LeftLength + 1
+  else PathLength := LeftLength;
+
+  Result:= True;
+end;
+
+function TRedBlackTree<T>.VerifyRedBlack(const Node: PNode): boolean;
+begin
+  //A red node must have two black children
+  if (Node = nil) then Exit(True);
+
+  if (Node.IsRed) then begin
+    if (Node.Right.IsRed) or (Node.Left.IsRed) then begin
+      Exit(False);
+    end;
+  end;
+
+  Result:= VerifyRedBlack(Node.Left) and VerifyRedBlack(Node.Right);
+end;
+
+{TODO -oJB -cVerifyOrder : Rewrite using iterator}
+function TRedBlackTree<T>.VerifyOrder: boolean;
+const
+  AllowDuplicates = false;
+var
+  Key, Previous: T;
+  Start: boolean;
+begin
+  //A binary tree must always have the nodes in sorted order.
+  Start:= true;
+  for Key in Self do begin
+    if (Start) then begin
+      Previous:= Key;
+      Start:= false;
+      continue;
+    end else begin
+      if Comparer.Compare(Key, Previous) < 0 then Exit(False);
+      if not(AllowDuplicates) and (Comparer.Compare(Key, Previous) = 0) then Exit(False);
+      Previous:= Key;
+    end;
+  end;
+
+  Result:= True;
+end;
+
+function TRedBlackTree<T>.VerifyTree: Boolean;
+var
+  Cur: PNode;
+begin
+  //A tree cannot have loops
+  if (Count = 0) then Exit(True);
+
+  Cur := Self.Root;
+  while (Cur.Left <> nil) do begin
+    Cur := Cur.Left;
+    if (Cur.Left = Cur) then begin
+      Assert(false);
+      Exit(false);
+    end;
+  end;
+
+  while (Cur <> nil) do begin
+
+    if (Cur.Left <> nil) then begin
+      if (Cur.Left.Parent <> Cur) then begin
+        assert(false);
+        Exit(False);
+      end;
+      if (Cur.Right = Cur) then begin
+         assert(false);
+         Exit(False);
+      end;
+    end;
+
+    if (Cur.Right <> nil) then begin
+      if (Cur.Right.Parent <> Cur) then begin
+        assert(false);
+        Exit(False);
+      end;
+      if (Cur.Right = Cur) then begin
+         assert(false);
+         Exit(False);
+      end;
+    end;
+
+    //find the next-largest vertex
+    if (Cur.Right <> nil) then begin
+      // go to smallest larger-or-equal Child
+      Cur := Cur.Right;
+      while (Cur.Left <> nil) do begin
+        Cur := Cur.Left;
+      end;
+    end else begin
+      // go up
+
+      // skip over the Nodes already visited
+      while ((Cur.Parent <> nil) and (Cur.Parent.Right = Cur)) do begin // these are the Nodes which are smaller and were already visited
+        Cur := Cur.Parent;
+      end;
+
+      // go one further up
+      if (Cur.Parent = nil) then begin
+        // done
+        Cur := nil;
+      end else begin
+        // go up
+        Cur := Cur.Parent;
+      end;
+    end;
+  end; {while}
+
+  Exit(True);
+end;
+
+function TRedBlackTree<T>.VerifyIntegrity: Boolean;
+var
+  Dummy: NativeUInt;
+  TreeOK: Boolean;
+  RootOK: Boolean;
+  PathsOK: Boolean;
+  ChildrenOK: Boolean;
+  OrderOK: Boolean;
+
+begin
+  TreeOK := Self.VerifyTree;
+
+  RootOK := Self.VerifyBlackRoot;
+  PathsOK := (Self.Root = nil) or VerifyBlackPaths(Root, dummy);
+  ChildrenOK := VerifyRedBlack(Self.Root);
+
+  OrderOK := Self.VerifyOrder;
+  Assert(RootOK,'Root not OK');
+  Assert(PathsOK, 'Paths not OK');
+  Assert(ChildrenOK, 'Children not OK');
+  Assert(TreeOK, 'Tree not OK');
+  Assert(OrderOK, 'Order not OK');
+
+  Result:= RootOK and PathsOK and ChildrenOK and TreeOK and OrderOK;
+end;
+
+procedure TRedBlackTree<T>.rbSwapNodes(n1, n2: PNode; SwapColors: Boolean);
+var
+  Temp: Boolean;
+begin
+  if (n1.Parent = n2) then begin
+    Self.rbSwapNeighbors(n2, n1);
+  end else if (n2.Parent = n1) then begin
+    Self.rbSwapNeighbors(n1, n2);
+  end else begin
+    Self.rbSwapUnrelatedNodes(n1, n2);
+  end;
+
+  if not(SwapColors) then begin
+    Temp:= n1.NodeColor;
+    n1.NodeColor:= n2.NodeColor;
+    n2.NodeColor:= Temp;
+  end;
+end;
+
+procedure TRedBlackTree<T>.rbSwapNeighbors(Parent, Child: PNode);
+var
+  Temp: PNode;
+begin
+  Child.Parent := Parent.Parent;
+  Parent.Parent := Child;
+  if (Child.Parent <> nil) then begin
+    if (Child.Parent.Left = Parent) then begin
+      Child.Parent.Left := Child;
+    end else begin
+      Child.Parent.Right := Child;
+    end;
+  end else begin
+    //This may color the root red, we will correct this later.
+    //Do not force the Root Black here.
+    fRoot := Child;
+  end;
+
+  if (Parent.Left = Child) then begin
+    Parent.Left := Child.Left;
+    if (Parent.Left <> nil) then begin
+      Parent.Left.Parent := Parent;
+    end;
+    Child.Left := Parent;
+
+    Temp:= Parent.Right;
+    Parent.Right:= Child.Right;
+    Child.Right:= Temp;
+
+    if (Child.Right <> nil) then begin
+      Child.Right.Parent := Child;
+    end;
+    if (Parent.Right <> nil) then begin
+      Parent.Right.Parent := Parent;
+    end;
+  end else begin
+    Parent.Right := Child.Right;
+    if (Parent.Right <> nil) then begin
+      Parent.Right.Parent := Parent;
+    end;
+    Child.Right := Parent;
+
+    Temp:= Parent.Left;
+    Parent.Left:= Child.Left;
+    Child.Left:= Temp;
+
+    if (Child.Left <> nil) then begin
+      Child.Left.Parent := Child;
+    end;
+    if (Parent.Left <> nil) then begin
+      Parent.Left.Parent := Parent;
+    end;
+  end;
+end;
+
+procedure TRedBlackTree<T>.rbSwapUnrelatedNodes(n1, n2: PNode);
+var
+  Temp: PNode;
+begin
+  Temp:= n1.Left;
+  n1.Left:= n2.Left;
+  n2.Left:= Temp;
+
+  if (n1.Left <> nil) then n1.Left.Parent := n1;
+  if (n2.Left <> nil) then n2.Left.Parent := n2;
+
+  Temp:= n1.Right;
+  n1.Right:= n2.Right;
+  n2.Right:= Temp;
+
+  if (n1.Right <> nil) then n1.Right.Parent := n1;
+  if (n2.Right <> nil) then n2.Right.Parent := n2;
+
+  Temp:= n1.Parent;
+  n1.Parent:= n2.Parent;
+  n2.Parent:= Temp;
+
+  if (n1.Parent <> nil) then begin
+    if (n1.Parent.Right = n2) then n1.Parent.Right := n1
+    else n1.Parent.Left := n1;
+  end else begin
+    fRoot := n1; //Allow the root to be red, we will correct this later.
+  end;
+  if (n2.Parent <> nil) then begin
+    if (n2.Parent.Right = n1) then n2.Parent.Right := n2
+    else n2.Parent.Left := n2;
+  end else begin
+    fRoot := n2;
+  end;
+end;
+
+procedure TRedBlackTree<T>.rbRemoveNode(Node: PNode);
+var
+  Cur, Child: PNode;
+  RightChild: PNode;
+  DeletedLeft: Boolean;
+  {$ifopt C+} ColorDiff: boolean; {$endif}
+begin
+  Dec(fCount);
+  if IsManagedType(T) then Finalize(Node.fKey);
+  Cur := Node;
+  Child := Node;
+
+  if ((Cur.Right <> nil) and (Cur.Left <> nil)) then begin
+    // Find the minimum of the larger-or-equal Children
+    Child := Cur.Right;
+    while (Child.Left <> nil) do begin
+      Child := Child.Left;
+    end; {while}
+  end else if (Cur.Left <> nil) then begin
+    // Only a left Child. This must be red and cannot have further Children (otherwise, black-balance would be violated)
+    Child := Child.Left;
+    Assert(Child.IsRed);
+    Assert((Child.Left = nil) and (Child.Right = nil));
+  end;
+
+  if (Child <> Node) then begin
+    {$ifopt c+} ColorDiff:= Node.NodeColor <> Child.NodeColor; {$endif}
+    Self.rbSwapNodes(Node, Child, false);
+    Assert(ColorDiff = (Node.NodeColor <> Child.NodeColor)); //Make sure color is not lost
+  end;
+  // Now, Node is a pseudo-leaf with the color of Child.
+
+  // Node cannot have a left Child, so if it has a right Child, the child must be red,
+  // thus Node must be black
+  if (Node.Right <> nil) then begin
+    Assert(Node.Right.IsRed);
+    Assert(Node.NodeColor = Color.Black);
+    // replace Node with its Child and color the Child black.
+    RightChild := Node.Right;
+    Self.rbSwapNodes(Node, RightChild, true);
+    RightChild.NodeColor := Color.Black;
+    RightChild.Right := nil; // Self stored the Node to be deleted…
+
+    Exit; // no fixup necessary
+  end;
+
+  // Node has no Children, so we have to just delete it, which is no problem if we are red. Otherwise, we must start a fixup at the Parent.
+  if (Node.Parent <> nil) then begin
+    DeletedLeft:= (Node.Parent.Left = Node);
+    if (DeletedLeft) then Node.Parent.Left := nil
+    else Node.Parent.Right := nil;
+
+  end else begin
+    Root := nil; // Tree is now empty!
+    Exit; // No fixup needed!
+  end;
+
+  if (Node.NodeColor = Color.Black) then begin
+    rbFixupAfterDelete(Node.Parent, DeletedLeft);
+  end;
+end;
+
+procedure TRedBlackTree<T>.rbFixupAfterDelete(Parent: PNode; DeletedLeft: Boolean);
+var
+  Sibling: PNode;
+  Temp: Boolean;
+begin
+  Assert((DeletedLeft and (Parent.Left = nil)) or (Parent.Right = nil));
+
+  while True do begin
+    // We just deleted a black Node below Parent.
+    if (DeletedLeft) then begin
+      Sibling := Parent.Right;
+    end else begin
+      Sibling := Parent.Left;
+    end;
+
+    Assert(Assigned(Sibling));
+    // Sibling must exist! If it didn't, then that branch would have had too few blacks…
+    if (
+        (Parent.NodeColor = Color.Black) and
+        (Sibling.NodeColor = Color.Black) and
+        ((Sibling.Left = nil) or (Sibling.Left.NodeColor = Color.Black)) and
+        ((Sibling.Right = nil) or (Sibling.Right.NodeColor = Color.Black))
+    ) then begin
+
+      // We can recolor and propagate up! (Case 3)
+      Sibling.NodeColor := Color.Red;
+      // Now everything below Parent is ok, but the branch started in Parent lost a black!
+      if (Parent = Root) then begin
+        // Doesn't matter! Parent is the root, no harm done.
+        Exit;
+      end else begin
+        // propagate up!
+        DeletedLeft := (Parent.Parent.Left = Parent);
+        Parent := Parent.Parent;
+      end;
+    end else begin // could not recolor the Sibling, do not propagate up
+      Break; //Stop propagating red nodes up.
+    end;
+  end;
+
+  if (Sibling.IsRed) then begin
+    // Case 2
+    Sibling.NodeColor := Color.Black;
+    Parent.NodeColor := Color.Red;
+    if (DeletedLeft) then begin
+      rbRotateLeft(Parent);
+      Sibling := Parent.Right;
+    end else begin
+      rbRotateRight(Parent);
+      Sibling := Parent.Left;
+    end;
+  end;
+
+  if (
+      (Sibling.NodeColor = Color.Black) and
+      ((Sibling.Left = nil) or (Sibling.Left.NodeColor = Color.Black)) and
+      ((Sibling.Right = nil) or (Sibling.Right.NodeColor = Color.Black))
+  ) then begin
+    // case 4
+    Parent.NodeColor := Color.Black;
+    Sibling.NodeColor := Color.Red;
+
+    Exit; // No further fixup necessary
+  end;
+
+  if (DeletedLeft) then begin
+    if ((Sibling.Right = nil) or (Sibling.Right.NodeColor = Color.Black)) then begin
+      // left Child of Sibling must be red! This is the folded case. (Case 5) Unfold!
+      rbRotateRight(Sibling);
+      Sibling.NodeColor := Color.Red;
+      // The new Sibling is now the Parent of the Sibling
+      Sibling := Sibling.Parent;
+      Sibling.NodeColor := Color.Black;
+    end;
+
+    // straight situation, case 6 applies!
+    rbRotateLeft(Parent);
+
+    Temp:= Parent.NodeColor;
+    Parent.NodeColor:= Sibling.NodeColor;
+    Sibling.NodeColor:= Temp;
+
+    Sibling.Right.NodeColor := Color.Black;
+  end else begin
+    if ((Sibling.Left = nil) or (Sibling.Left.NodeColor = Color.Black)) then begin
+      // right Child of Sibling must be red! This is the folded case. (Case 5) Unfold!
+
+      rbRotateLeft(Sibling);
+      Sibling.NodeColor := Color.Red;
+      // The new Sibling is now the Parent of the Sibling
+      Sibling := Sibling.Parent;
+      Sibling.NodeColor := Color.Black;
+    end;
+
+    // straight situation, case 6 applies!
+    rbRotateRight(Parent);
+
+    Temp:= Parent.NodeColor;
+    Parent.NodeColor:= Sibling.NodeColor;
+    Sibling.NodeColor:= Temp;
+
+    Sibling.Left.NodeColor := Color.Black;
+  end;
+end;
+
+//procedure TRedBlackTree<T>.rbRemove(Node: PNode);
+//begin
+//  rbRemoveNode(Node);
+//end;
+
+
 function TBinaryTreeBase<T>.Contains(const Key: T): boolean;
 begin
   Result:= Assigned(FindNode(Root, Key));
@@ -861,13 +1471,13 @@ var
   OldCount: Integer;
 begin
   OldCount:= Count;
-  fRoot:= Self.InternalInsert(fRoot, Item);
+  Root:= Self.InternalInsert(Root, Item);
   Result:= (Count <> OldCount);
 end;
 
 function TRedBlackTree<T>.GetEnumerator: IEnumerator<T>;
 begin
-  Result:= TTreeEnumerator.Create(Root);
+  Result:= TTreeEnumerator.Create(Self);
 end;
 
 function TBinaryTreeBase<T>.FindNode(const Head: PNode; const Key: T): PNode;
@@ -881,19 +1491,42 @@ begin
 end;
 
 function TBinaryTreeBase<T>.InternalInsert(Head: PNode; const Key: T): PNode;
+var
+  Current, Parent: PNode;
+  Compare: integer;
 begin
-  if Head = nil then begin
-    Exit(NewNode(Key, nil));
+  Parent:= nil;
+  Current:= Head;
+  while Current <> nil do begin
+    Compare:= Comparer.Compare(Key, Current.fKey);
+    Parent:= Current;
+    if (Compare > 0) then Current:= Current.Right
+    else if (Compare < 0) then Current:= Current.Left
+    else raise EInvalidOperationException.CreateRes(@SSetDuplicateInsert);
   end;
 
-  if Equal(Key, Head.Key) then raise EInvalidOperationException.CreateRes(@SSetDuplicateInsert)
-  else if (Less(Key, Head.Key)) then begin
-    Head.Left:= InternalInsert(Head.Left, Key);
+  Current:= NewNode(Key, Parent);
+  if (Compare > 0) then begin
+    Current.Right:= Parent.Right;
+    Parent.fRight:= Current;
   end else begin
-    Head.Right:= InternalInsert(Head.Right, Key);
+    Current.Left:= Parent.Left;
+    Parent.fLeft:= Current;
   end;
+  Result:= Current;
 
-  Result:= Head;
+//  if Head = nil then begin
+//    Exit(NewNode(Key, nil));
+//  end;
+//
+//  if Equal(Key, Head.Key) then raise EInvalidOperationException.CreateRes(@SSetDuplicateInsert)
+//  else if (Less(Key, Head.Key)) then begin
+//    Head.Left:= InternalInsert(Head.Left, Key);
+//  end else begin
+//    Head.Right:= InternalInsert(Head.Right, Key);
+//  end;
+//
+//  Result:= Head;
 end;
 
 function TRedBlackTree<T>.First: T;
@@ -902,24 +1535,21 @@ begin
   Result:= MinNode(Root).Key;
 end;
 
-function TRedBlackTree<T>.MinNode(const Head: PNode): PNode;
+function TBinaryTreeBase<T>.TNode.Uncle: PNode;
+var
+  GrandParent: PNode;
 begin
-  Assert(Head <> nil);
-  Result:= Head;
-  while Result.Left <> nil do Result:= Result.Left;
-end;
-
-function TRedBlackTree<T>.MaxNode(const Head: PNode): PNode;
-begin
-  Assert(Head <> nil);
-  Result:= Head;
-  while Result.Right <> nil do Result:= Result.Right;
+  Assert(Assigned(Parent));
+  GrandParent:= Parent.Parent;
+  Assert(Assigned(GrandParent));
+  if (GrandParent.Left = Parent) then Result:= GrandParent.Right
+  else Result:= GrandParent.Left;
 end;
 
 function TBinaryTreeBase<T>.TNode.IsRed: boolean;
 begin
   if @Self = nil then Exit(false);
-  Result:= (NodeColor = Color.Red);
+  Result:= not(fIsBlack);
 end;
 
 function TRedBlackTree<T>.Add(const Key: T): boolean;
@@ -927,52 +1557,92 @@ var
   OldCount: Integer;
 begin
   OldCount:= Count;
-  fRoot:= InternalInsert(fRoot, Key);
-  // if fRoot.IsRed then Inc(HeightBlack);
-  fRoot.NodeColor:= Color.Black;
+  InternalInsert(Root, Key);
+  //Root.NodeColor:= Color.Black;
   Result:= (Count <> OldCount);
 end;
 
+//function TRedBlackTree<T>.DoInsert(Head: PNode; const Key: T): PNode;
+//var
+//  Node, Parent, InsertedNode: PNode;
+//  Diff: integer;
+//begin
+//  Parent:= nil;
+//  Node:= Head;
+//  while (Node <> nil) do begin
+//    Diff:= Comparer.Compare(Key, Node.Key);
+//    if (Diff = 0) then raise EInvalidOperationException.CreateRes(@SSetDuplicateInsert);
+//    Parent:= Node;
+//    if (Diff < 0) then Node:= Node.Left else Node:= Node.Right;
+//  end; {while}
+//  InsertedNode:= NewNode(Key, Parent);
+//  if Assigned(Parent) then begin
+//
+//    if (Diff < 0) then Parent.Left:= InsertedNode
+//    else Parent.Right:= InsertedNode;
+//    FixUpAfterInsert(InsertedNode);
+//  end else begin
+//    Root:= InsertedNode;  //SetRoot will also correct the color and parent nodes
+//  end;
+//
+//
+////  if Head = nil then begin
+////    Exit(NewNode(Key, nil));
+////  end;
+////  if (fSpecies = TD234) then begin
+////    if (Head.Left.IsRed) and (Head.Right.IsRed) then ColorFlip(Head);
+////  end;
+////
+////  if (Less(Key, Head.Key)) then begin
+////    Head.Left:= DoInsert(Head.Left, Key);
+////  end else begin
+////    Head.Right:= DoInsert(Head.Right, Key);
+////  end;
+////
+////  if Head.Right.IsRed then Head:= RotateLeft(Head);
+////  if Head.Left.IsRed and Head.Left.Left.IsRed then Head:= RotateRight(Head);
+////
+////  if (fSpecies = BU23) then begin
+////    if (Head.Left.IsRed and Head.Right.IsRed) then ColorFlip(Head);
+////  end;
+////
+////  Result:= Head;
+//end;
+
 function TRedBlackTree<T>.InternalInsert(Head: PNode; const Key: T): PNode;
 begin
-  if Head = nil then begin
-    Exit(NewNode(Key, nil));
-  end;
-  if (fSpecies = TD234) then begin
-    if (Head.Left.IsRed) and (Head.Right.IsRed) then ColorFlip(Head);
-  end;
-
-  if Equal(Key, Head.Key) then raise EInvalidOperationException.CreateRes(@SSetDuplicateInsert)
-  else if (Less(Key, Head.Key)) then begin
-    Head.Left:= InternalInsert(Head.Left, Key);
-  end else begin
-    Head.Right:= InternalInsert(Head.Right, Key);
-  end;
-
-  // if (fSpecies = BST) then exit(Head);
-
-  if Head.Right.IsRed then Head:= RotateLeft(Head);
-
-  if Head.Left.IsRed and Head.Left.Left.IsRed then Head:= RotateRight(Head);
-
-  if (fSpecies = BU23) then begin
-    if (Head.Left.IsRed and Head.Right.IsRed) then ColorFlip(Head);
-  end;
-
-  Result:= Head;
+  Result:= rbInsertBase(Key, Head, true);
 end;
 
-function TRedBlackTree<T>.DeleteMin(Head: PNode): PNode;
-begin
-  Assert(Assigned(Head));
-  if (Head.Left = nil) then begin
-    FreeSingleNode(Head);
-    Exit(nil);
-  end;
-  if not(Head.Left.IsRed) and not(Head.Left.Left.IsRed) then Head:= MoveRedLeft(Head);
-  Head.Left:= DeleteMin(Head.Left);
-  Result:= FixUp(Head);
-end;
+//var
+//  Current, Parent: PNode;
+////  Compare: integer;
+////begin
+////  Parent:= nil;
+////  Current:= Head;
+////  while Current <> nil do begin
+////    Compare:= Comparer.Compare(Key, Current.fKey);
+////    Parent:= Current;
+////    if (Compare > 0) then Current:= Current.Right
+////    else if (Compare < 0) then Current:= Current.Left
+////    else raise EInvalidOperationException.CreateRes(@SSetDuplicateInsert);
+////  end;
+//begin
+//  Parent:= Head;
+//  DoInsert(Parent, Key);
+//end;
+
+//function TRedBlackTree<T>.DeleteMin(Head: PNode): PNode;
+//begin
+//  Assert(Assigned(Head));
+//  if (Head.Left = nil) then begin
+//    FreeSingleNode(Head);
+//    Exit(nil);
+//  end;
+//  if not(Head.Left.IsRed) and not(Head.Left.Left.IsRed) then Head:= MoveRedLeft(Head);
+//  Head.Left:= DeleteMin(Head.Left);
+//  Result:= FixUp(Head);
+//end;
 
 destructor TRedBlackTree<T>.Destroy;
 begin
@@ -980,55 +1650,66 @@ begin
   inherited Destroy;
 end;
 
-function TRedBlackTree<T>.DeleteMax(Head: PNode): PNode;
-begin
-  Assert(Assigned(Head));
-  if (Head.Left.IsRed) then Head:= RotateRight(Head);
-  if Head.Right = nil then begin
-    FreeSingleNode(Head);
-    Exit(nil);
-  end;
-  if not(Head.Right.IsRed) and not(Head.Right.Left.IsRed) then Head:= MoveRedRight(Head);
-  Head.Right:= DeleteMax(Head.Right);
-  Result:= FixUp(Head);
-end;
+//function TRedBlackTree<T>.DeleteMax(Head: PNode): PNode;
+//begin
+//  Assert(Assigned(Head));
+//  if (Head.Left.IsRed) then Head:= RotateRight(Head);
+//  if Head.Right = nil then begin
+//    FreeSingleNode(Head);
+//    Exit(nil);
+//  end;
+//  if not(Head.Right.IsRed) and not(Head.Right.Left.IsRed) then Head:= MoveRedRight(Head);
+//  Head.Right:= DeleteMax(Head.Right);
+//  Result:= FixUp(Head);
+//end;
 
 function TRedBlackTree<T>.Remove(const Key: T): boolean;
 var
-  OldCount: Integer;
+  Node: PNode;
 begin
-  OldCount:= Count;
-  fRoot:= DeleteNode(Root, Key);
-  if Root <> nil then Root.NodeColor:= Color.Black;
-  Result:= (Count <> OldCount);
+  Node:= FindNode(Root, Key);
+  if (Node = nil) then Exit(false);
+  rbRemoveNode(Node);
+  Result:= True;
 end;
+
+//var
+//  OldCount: Integer;
+//begin
+//  OldCount:= Count;
+//  Root:= DeleteNode(Root, Key);
+//  if Root <> nil then begin
+//    Root.NodeColor:= Color.Black;
+//  end;
+//  Result:= (Count <> OldCount);
+//end;
 
 function TRedBlackTree<T>.Reversed: IEnumerable<T>;
 begin
-  Result:= TTreeEnumerator.Create(Root, FromEnd);
+  Result:= TTreeEnumerator.Create(Self, FromEnd);
 end;
 
-function TRedBlackTree<T>.DeleteNode(Head: PNode; Key: T): PNode;
-begin
-  Assert(Assigned(Head));
-  if Less(Key, Head.Key) then begin
-    if not(Head.Left.IsRed) and not(Head.Left.Left.IsRed) then Head:= MoveRedLeft(Head);
-    Head.Left:= DeleteNode(Head.Left, Key);
-  end else begin
-    if Head.Left.IsRed then Head:= RotateRight(Head);
-    if Equal(Key, Head.Key) and (Head.Right = nil) then begin
-      FreeSingleNode(Head);
-      Exit(nil);
-    end;
-    if not(Head.Right.IsRed) and not(Head.Right.Left.IsRed) then Head:= MoveRedRight(Head);
-    if Equal(Key, Head.Key) then begin
-      Head.fKey:= MinNode(Head.Right).Key;
-      Head.Right:= DeleteMin(Head.Right);
-    end
-    else Head.Right:= DeleteNode(Head.Right, Key);
-  end;
-  Result:= FixUp(Head);
-end;
+//function TRedBlackTree<T>.DeleteNode(Head: PNode; Key: T): PNode;
+//begin
+//  Assert(Assigned(Head));
+//  if Less(Key, Head.Key) then begin
+//    if not(Head.Left.IsRed) and not(Head.Left.Left.IsRed) then Head:= MoveRedLeft(Head);
+//    Head.Left:= DeleteNode(Head.Left, Key);
+//  end else begin
+//    if Head.Left.IsRed then Head:= RotateRight(Head);
+//    if Equal(Key, Head.Key) and (Head.Right = nil) then begin
+//      FreeSingleNode(Head);
+//      Exit(nil);
+//    end;
+//    if not(Head.Right.IsRed) and not(Head.Right.Left.IsRed) then Head:= MoveRedRight(Head);
+//    if Equal(Key, Head.Key) then begin
+//      Head.fKey:= MinNode(Head.Right).Key;
+//      Head.Right:= DeleteMin(Head.Right);
+//    end
+//    else Head.Right:= DeleteNode(Head.Right, Key);
+//  end;
+//  Result:= FixUp(Head);
+//end;
 
 function TRedBlackTree<T>.Last: T;
 begin
@@ -1062,6 +1743,20 @@ begin
   Result:= DefaultValue;
 end;
 
+function TBinaryTreeBase<T>.MinNode(const Head: PNode): PNode;
+begin
+  Assert(Head <> nil);
+  Result:= Head;
+  while Result.Left <> nil do Result:= Result.Left;
+end;
+
+function TBinaryTreeBase<T>.MaxNode(const Head: PNode): PNode;
+begin
+  Assert(Head <> nil);
+  Result:= Head;
+  while Result.Right <> nil do Result:= Result.Right;
+end;
+
 function TBinaryTreeBase<T>.Less(const A, B: T): boolean;
 begin
   Result:= Comparer.Compare(A, B) < 0;
@@ -1082,92 +1777,116 @@ begin
   Remove(Key);
 end;
 
-procedure TRedBlackTree<T>.ColorFlip(const Node: PNode);
-begin
-  Assert(Assigned(Node));
-  Node.NodeColor:= not(Node.NodeColor);
-  if Node.Left <> nil then Node.Left.NodeColor:= not(Node.Left.NodeColor);
-  if Node.Right <> nil then Node.Right.NodeColor:= not(Node.Right.NodeColor);
-end;
+//procedure TRedBlackTree<T>.ColorFlip(const Node: PNode);
+//begin
+//  Assert(Assigned(Node));
+//  Node.NodeColor:= not(Node.NodeColor);
+//  if Node.Left <> nil then Node.Left.NodeColor:= not(Node.Left.NodeColor);
+//  if Node.Right <> nil then Node.Right.NodeColor:= not(Node.Right.NodeColor);
+//end;
 
-function TRedBlackTree<T>.RotateLeft(Node: PNode): PNode;
-var
-  x: PNode;
-begin
-  Assert(Assigned(Node));
-  // Make a right-leaning 3-Node lean to the left.
-  x:= Node.Right;
-  Node.Right:= x.Left;
 
-  x.Left:= Node;
-
-  x.NodeColor:= x.Left.NodeColor;
-  x.Left.NodeColor:= Color.Red;
-  Result:= x;
-end;
-
-function TRedBlackTree<T>.RotateRight(Node: PNode): PNode;
-var
-  x: PNode;
-begin
-  Assert(Assigned(Node));
-  // Make a left-leaning 3-Node lean to the right.
-  x:= Node.Left;
-  Node.Left:= x.Right;
-
-  x.Right:= Node;
-
-  x.NodeColor:= x.Right.NodeColor;
-  x.Right.NodeColor:= Color.Red;
-  Result:= x;
-end;
-
-function TRedBlackTree<T>.MoveRedLeft(Node: PNode): PNode;
-begin
-  Assert(Assigned(Node));
-  // Assuming that Node is red and both Node.left and Node.left.left
-  // are black, make Node.left or one of its children red.
-  ColorFlip(Node);
-  if ((Node.Right.Left.IsRed)) then begin
-    Node.Right:= RotateRight(Node.Right);
-
-    Node:= RotateLeft(Node);
-    ColorFlip(Node);
-
-    if ((Node.Right.Right.IsRed)) then begin
-      Node.Right:= RotateLeft(Node.Right);
-    end;
-  end;
-  Result:= Node;
-end;
-
-function TRedBlackTree<T>.MoveRedRight(Node: PNode): PNode;
-begin
-  Assert(Assigned(Node));
-  // Assuming that Node is red and both Node.right and Node.right.left
-  // are black, make Node.right or one of its children red.
-  ColorFlip(Node);
-  if (Node.Left.Left.IsRed) then begin
-    Node:= RotateRight(Node);
-    ColorFlip(Node);
-  end;
-  Result:= Node;
-end;
-
-function TRedBlackTree<T>.FixUp(Node: PNode): PNode;
-begin
-  Assert(Assigned(Node));
-  if ((Node.Right.IsRed)) then begin
-    if (fSpecies = TD234) and ((Node.Right.Left.IsRed)) then Node.Right:= RotateRight(Node.Right);
-    Node:= RotateLeft(Node);
-  end;
-
-  if ((Node.Left.IsRed) and (Node.Left.Left.IsRed)) then Node:= RotateRight(Node);
-
-  if (fSpecies = BU23) and (Node.Left.IsRed) and (Node.Right.IsRed) then ColorFlip(Node);
-
-  Result:= Node;
-end;
+//function TRedBlackTree<T>.RotateRight(Node: PNode): PNode;
+//var
+//  x: PNode;
+//begin
+//  Assert(Assigned(Node));
+//  // Make a left-leaning 3-Node lean to the right.
+//  x:= Node.Left;
+//  Node.Left:= x.Right;
+//
+//  x.Right:= Node;
+//
+//  x.NodeColor:= x.Right.NodeColor;
+//  x.Right.NodeColor:= Color.Red;
+//  Result:= x;
+//end;
+//
+//function TRedBlackTree<T>.MoveRedLeft(Node: PNode): PNode;
+//begin
+//  Assert(Assigned(Node));
+//  // Assuming that Node is red and both Node.left and Node.left.left
+//  // are black, make Node.left or one of its children red.
+//  ColorFlip(Node);
+//  if ((Node.Right.Left.IsRed)) then begin
+//    Node.Right:= RotateRight(Node.Right);
+//
+//    Node:= RotateLeft(Node);
+//    ColorFlip(Node);
+//
+//    if ((Node.Right.Right.IsRed)) then begin
+//      Node.Right:= RotateLeft(Node.Right);
+//    end;
+//  end;
+//  Result:= Node;
+//end;
+//
+//function TRedBlackTree<T>.MoveRedRight(Node: PNode): PNode;
+//begin
+//  Assert(Assigned(Node));
+//  // Assuming that Node is red and both Node.right and Node.right.left
+//  // are black, make Node.right or one of its children red.
+//  ColorFlip(Node);
+//  if (Node.Left.Left.IsRed) then begin
+//    Node:= RotateRight(Node);
+//    ColorFlip(Node);
+//  end;
+//  Result:= Node;
+//end;
+//
+//procedure TRedBlackTree<T>.FixUpAfterInsert(NewNode: PNode);
+//var
+//  Node: PNode;
+//  P,G: PNode;
+//begin
+//  Assert(NewNode <> fRoot);
+//  Node:= NewNode;
+//  //Recolor
+//  while (Node.Parent.IsRed) //The root is always black, so we are sure to have a grandparent
+//        and (Node.Uncle.IsRed) do begin
+//    Node.Parent.NodeColor:= Color.Black;
+//    Node.Uncle.NodeColor:= Color.Black;
+//
+//    if (Node.Parent.Parent <> Root) then begin //do not iterate into the root
+//      Node.Parent.Parent.NodeColor:= Color.Red;
+//      Node:= Node.Parent.Parent;
+//    end else Exit;
+//  end; {while}
+//
+//  //Rebalance
+//  if (Node.Parent.NodeColor = Color.Black) then Exit;
+//  P:= Node.Parent;
+//  G:= P.Parent;
+//  if (G.Left = P) then begin
+//    if (P.Right = Node) then begin
+//      RotateLeft(P);
+//      Node.NodeColor:= Color.Black;
+//    end else P.NodeColor:= Color.Black;
+//    RotateRight(G);
+//  end else begin
+//    if (P.Left = Node) then begin
+//      RotateRight(P);
+//      Node.NodeColor:= Color.Black;
+//    end else P.NodeColor:= Color.Black;
+//    RotateLeft(G);
+//  end;
+//  G.NodeColor:= Color.Red;
+//end;
+//
+//function TRedBlackTree<T>.FixUp(Node: PNode): PNode;
+//begin
+//  Assert(Assigned(Node));
+//  if ((Node.Right.IsRed)) then begin
+//    if (fSpecies = TD234) and ((Node.Right.Left.IsRed)) then Node.Right:= RotateRight(Node.Right);
+//    Node:= RotateLeft(Node);
+//  end;
+//
+//  if ((Node.Left.IsRed) and (Node.Left.Left.IsRed)) then Node:= RotateRight(Node);
+//
+//  if (fSpecies = BU23) and (Node.Left.IsRed) and (Node.Right.IsRed) then ColorFlip(Node);
+//
+//  Result:= Node;
+//end;
 
 procedure TBinaryTreeBase<T>.FreeSingleNode(const Node: PNode);
 var
@@ -1185,22 +1904,82 @@ begin
   Dec(fCount);
 end;
 
+function TBinaryTreeBase<T>.NextNode(const Node: PNode): PNode;
+var
+  Current, Parent: PNode;
+begin
+  if (Node = nil) then Exit(MinNode(Root))
+  else if (Node.Right = nil) then begin
+    Current:= Node;
+    Parent:= Node.Parent;
+    while (True) do begin
+      if (Parent = nil) or (Current = Parent.Left) then Exit(Parent)
+      else begin
+        Current:= Parent;
+        Parent:= Parent.Parent;
+      end;
+    end; {while}
+  end else begin
+    Result:= Node.Right;
+    while Assigned(Result.Left) do begin
+      Result:= Result.Left;
+    end;
+  end;
+end;
+
+function TBinaryTreeBase<T>.PreviousNode(const Node: PNode): PNode;
+var
+  p,q: PNode;
+begin
+  if (Node = nil) then Exit(MaxNode(Root))
+  else if (Node.Left = nil) then begin
+    p:= Node;
+    q:= Node.Parent;
+    while (True) do begin
+      if (q = nil) or (p = q.Right) then Exit(q)
+      else begin
+        p:= q;
+        q:= q.Parent;
+      end;
+    end; {while}
+  end else begin
+    Result:= Node.Left;
+    while Assigned(Result.Right) do begin
+      Result:= Result.Right;
+    end;
+  end;
+end;
+
 procedure TBinaryTreeBase<T>.TraverseInOrder(const Node: PNode; Action: TNodePredicate);
+var
+  Current: PNode;
 begin
   Assert(Assigned(Action));
-  Assert(Assigned(Node));
-  if Assigned(Node.Left) then TraverseInOrder(Node.Left, Action);
-  if Action(Node) then Exit;
-  if Assigned(Node.Right) then TraverseInOrder(Node.Right, Action);
+  //Assert(Assigned(Node));
+  //if Assigned(Node.Left) then TraverseInOrder(Node.Left, Action);
+  //if Action(Node) then Exit;
+  //if Assigned(Node.Right) then TraverseInOrder(Node.Right, Action);
+  Current:= Node;
+  repeat
+    if (Current <> nil) then if (Action(Current)) then Exit;
+    Current:= NextNode(Current);
+  until Current = nil;
 end;
 
 procedure TBinaryTreeBase<T>.TraverseReverseOrder(const Node: PNode; Action: TNodePredicate);
+var
+  Current: PNode;
 begin
   Assert(Assigned(Action));
-  Assert(Assigned(Node));
-  if Assigned(Node.Right) then TraverseReverseOrder(Node.Right, Action);
-  if Action(Node) then Exit;
-  if Assigned(Node.Left) then TraverseReverseOrder(Node.Left, Action);
+  //Assert(Assigned(Node));
+//  if Assigned(Node.Right) then TraverseReverseOrder(Node.Right, Action);
+//  if Action(Node) then Exit;
+//  if Assigned(Node.Left) then TraverseReverseOrder(Node.Left, Action);
+  Current:= Node;
+  repeat
+    if (Current <> nil) then if (Action(Current)) then Exit;
+    Current:= PreviousNode(Current);
+  until Current = nil;
 end;
 
 procedure TBinaryTreeBase<T>.TraversePostOrder(const Node: PNode; Action: TNodePredicate);
@@ -1248,142 +2027,54 @@ begin
   fRoot:= nil;
   fCount:= 0;
 end;
-{$IF defined(debug)}
 
-function TRedBlackTree<T>.Check: boolean;
-begin
-  // Is this tree a red-black tree?
-  Result:= IsBST and Is234 and IsBalanced;
-end;
-
-function TRedBlackTree<T>.IsBST: boolean;
-begin
-  // Is this tree a BST?
-  if (Root = nil) then Exit(true);
-  Result:= IsBST(Root, First, Last);
-end;
-
-function TRedBlackTree<T>.IsBST(Node: PNode; MinKey, MaxKey: T): boolean;
-begin
-  // Are all the values in the BST rooted at x between min and max,
-  // and does the same property hold for both subtrees?
-  if (Node = nil) then Exit(true);
-  if (Less(Node.Key, MinKey) or Less(MaxKey, Node.Key)) then Exit(false);
-  Result:= IsBST(Node.Left, MinKey, Node.Key) and IsBST(Node.Right, Node.Key, MaxKey);
-end;
-
-function TRedBlackTree<T>.Is234: boolean;
-begin
-  Result:= Is234(Root);
-end;
-
-function TRedBlackTree<T>.Is234(Node: PNode): boolean;
-begin
-  if (Node = nil) then Exit(true);
-  if ((Node.Right.IsRed)) then Exit((fSpecies = TD234) and (Node.Left.IsRed));
-  if (not(Node.Right.IsRed)) then Exit(true);
-  Result:= Is234(Node.Left) and Is234(Node.Right);
-end;
-
-function TRedBlackTree<T>.IsBalanced: boolean;
-var
-  x: PNode;
-  BlackCount: Integer;
-begin
-  // Do all paths from root to leaf have same number of black edges?
-  BlackCount:= 0; // number of black links on path from root to min
-  x:= Root;
-  while (x <> nil) do begin
-    if (not(x.IsRed)) then Inc(BlackCount);
-    x:= x.Left;
-  end;
-  Result:= IsBalanced(Root, BlackCount);
-end;
-
-function TRedBlackTree<T>.IsBalanced(Node: PNode; Black: Integer): boolean;
-begin
-  // Does every path from the root to a leaf have the given number
-  // of black links?
-  if (Node = nil) and (Black = 0) then Exit(true)
-  else if (Node = nil) and (Black <> 0) then Exit(false);
-  if (not(Node.IsRed)) then Dec(Black);
-  Result:= IsBalanced(Node.Left, Black) and IsBalanced(Node.Right, Black);
-end;
-{$ENDIF}
 { TRedBlackTree<K>.TreeEnumerator }
 
-constructor TBinaryTreeBase<T>.TTreeEnumerator.Create(const Head: PNode; Direction: TDirection);
+constructor TBinaryTreeBase<T>.TTreeEnumerator.Create(const Tree: TBinaryTreeBase<T>; Direction: TDirection);
 begin
   inherited Create;
-  fHead:= Head;
-  fStack.Init;
+  fTree:= Tree;
   fDirection:= Direction;
 end;
 
 function TBinaryTreeBase<T>.TTreeEnumerator.Clone: TIterator<T>;
 begin
-  Result:= TTreeEnumerator.Create(Self.fHead, Self.fDirection);
+  Result:= TTreeEnumerator.Create(Self.fTree, Self.fDirection);
 end;
 
-constructor TBinaryTreeBase<T>.TTreeEnumerator.Create(const Head: PNode);
+constructor TBinaryTreeBase<T>.TTreeEnumerator.Create(const Tree: TBinaryTreeBase<T>);
 begin
-  Create(Head, FromBeginning);
+  Create(Tree, FromBeginning);
 end;
 
 destructor TBinaryTreeBase<T>.TTreeEnumerator.Destroy;
 begin
-  // fStack.Free; //stack is a record, does not need to be freed.
   inherited;
 end;
 
 function TBinaryTreeBase<T>.TTreeEnumerator.MoveNext: boolean;
-var
-  Node: PNode;
 begin
   if (fCurrentNode = nil) then begin
-    fCurrentNode:= fHead;
-    if fCurrentNode = nil then Exit(false);
-    // Start in the Left most position
-    fStack.Push(fCurrentNode);
+    if (fTree.Count = 0) then Exit(false);
+    case fDirection of
+      FromBeginning: fCurrentNode:= fTree.MinNode(fTree.Root);
+      FromEnd: fCurrentNode:= fTree.MaxNode(fTree.Root);
+    end;
+  end else begin
+    case fDirection of
+      FromBeginning: fCurrentNode:= FTree.NextNode(fCurrentNode);
+      FromEnd: fCurrentNode:= FTree.PreviousNode(fCurrentNode);
+    end;
   end;
-  while not fStack.IsEmpty do begin
-    { get the Node at the head of the queue }
-    Node:= fStack.Pop;
-    { if it's nil, pop the next Node, perform the Action on it. If
-      this returns with a request to stop then return this Node }
-    if (Node = nil) then begin
-      fCurrentNode:= fStack.Pop;
-      fCurrent:= fCurrentNode.Key;
-      Exit(true);
-    end
-    { otherwise, the children of the Node have not been pushed yet }
-    else begin
-      case fDirection of
-        FromBeginning: begin { push the Left child, if it's not nil }
-          if (Node.Right <> nil) then fStack.Push(Node.Right);
-          { push the Node, followed by a nil pointer }
-          fStack.Push(Node);
-          fStack.Push(nil);
-          { push the Right child, if it's not nil }
-          if (Node.Left <> nil) then fStack.Push(Node.Left);
-        end; { FromBeginning }
-        FromEnd: begin { push the Left child, if it's not nil }
-          if (Node.Left <> nil) then fStack.Push(Node.Left);
-          { push the Node, followed by a nil pointer }
-          fStack.Push(Node);
-          fStack.Push(nil);
-          { push the Right child, if it's not nil }
-          if (Node.Right <> nil) then fStack.Push(Node.Right);
-        end; { FromEnd: }
-      end; { case }
-    end; { else }
-  end; { while }
-  Result:= false;
+  if (fCurrentNode = nil) then Result:= false
+  else begin
+    Result:= True;
+    fCurrent:= fCurrentNode.Key;
+  end;
 end;
 
 procedure TBinaryTreeBase<T>.TTreeEnumerator.Reset;
 begin
-  fStack.Init;
   fCurrentNode:= nil;
 end;
 
@@ -1608,28 +2299,6 @@ begin
   Result:= TPair.Create(Key, Value);
 end;
 
-procedure TRedBlackTree<K, V>.Traverse(Order: TraverseOrder; const Action: TTraverseAction);
-var
-  ActionWrapper: TNodePredicate;
-begin
-  ActionWrapper:= function(const Node: PNode): boolean
-    var
-      Abort: boolean;
-    begin
-      Abort:= false;
-      Action(Node.Key.Key, Node.Key.Value, Abort);
-      Result:= Abort;
-    end;
-
-  case Order of
-    TraverseOrder.InOrder: TraverseInOrder(Root, ActionWrapper);
-    TraverseOrder.PreOrder: TraversePreOrder(Root, ActionWrapper);
-    TraverseOrder.PostOrder: TraversePostOrder(Root, ActionWrapper);
-    TraverseOrder.ReverseOrder: TraverseReverseOrder(Root, ActionWrapper);
-  else raise EInvalidOperationException.Create('Unsupported traverse order');
-  end;
-end;
-
 { TRedBlackTree<K, V>.TTreeComparer }
 
 constructor TRedBlackTree<K, V>.TTreeComparer.Create(const Comparer: IComparer<K>);
@@ -1658,12 +2327,12 @@ end;
 // Todo: implement addition code.
 function TNAryTree<K, V>.Add(const Key: TPair<K, V>): boolean;
 begin
-  fRoot:= InternalInsert(fRoot, Key);
+  Root:= InternalInsert(Root, Key);
 end;
 
 procedure TNAryTree<K, V>.Add(const Key: K; const Value: V);
 begin
-  fRoot:= InternalInsert(fRoot, Key, Value);
+  Root:= InternalInsert(Root, Key, Value);
 end;
 
 function TNAryTree<K, V>.Get(Key: K): TPair<K, V>;
@@ -1697,20 +2366,46 @@ begin
 end;
 
 function TNAryTree<K, V>.InternalInsert(Head: PNode; const Key: K; const Value: V): PNode;
+var
+  Current, Parent: PNode;
+  Compare: integer;
+  KVPair: TPair<K,V>;
 begin
-  if Head = nil then begin
-    Exit(NewNode(Pair(Key, Value), nil));
+  Parent:= nil;
+  Current:= Head;
+  KVPair:= Pair(Key, Value);
+  while Current <> nil do begin
+    Compare:= Comparer.Compare(KVPair, Current.fKey);
+    Parent:= Current;
+    if (Compare > 0) then Current:= Current.Right
+    else if (Compare < 0) then Current:= Current.Left
+    else raise EInvalidOperationException.CreateRes(@SSetDuplicateInsert);
   end;
 
-  if Equal(Key, Head.Key.Key) then raise EInvalidOperationException.CreateRes(@SSetDuplicateInsert)
-  else if (Less(Key, Head.Key.Key)) then begin
-    Head.Left:= InternalInsert(Head.Left, Key, Value);
+  Current:= NewNode(KVPair, Parent);
+  if (Compare > 0) then begin
+    Current.Right:= Parent.Right;
+    Parent.fRight:= Current;
   end else begin
-    Head.Right:= InternalInsert(Head.Right, Key, Value);
+    Current.Left:= Parent.Left;
+    Parent.fLeft:= Current;
   end;
-
-  Result:= Head;
+  Result:= Current;
 end;
+//begin
+//  if Head = nil then begin
+//    Exit(NewNode(Pair(Key, Value), nil));
+//  end;
+//
+//  if Equal(Key, Head.Key.Key) then raise EInvalidOperationException.CreateRes(@SSetDuplicateInsert)
+//  else if (Less(Key, Head.Key.Key)) then begin
+//    Head.Left:= InternalInsert(Head.Left, Key, Value);
+//  end else begin
+//    Head.Right:= InternalInsert(Head.Right, Key, Value);
+//  end;
+//
+//  Result:= Head;
+//end;
 
 { TTree<K> }
 
@@ -1814,7 +2509,7 @@ begin
   Inc(fCount);
 end;
 
-procedure TBinaryTreeBase<T>.Traverse(Order: TraverseOrder; const Action: TTraverseAction);
+procedure TBinaryTreeBase<T>.Traverse(Order: TTraverseOrder; const Action: TTraverseAction<T>);
 var
   ActionWrapper: TNodePredicate;
 begin
@@ -1828,10 +2523,10 @@ begin
     end;
 
   case Order of
-    TraverseOrder.PreOrder: TraversePreOrder(Root, ActionWrapper);
-    TraverseOrder.InOrder: TraverseInOrder(Root, ActionWrapper);
-    TraverseOrder.PostOrder: TraversePostOrder(Root, ActionWrapper);
-    TraverseOrder.ReverseOrder: TraverseReverseOrder(Root, ActionWrapper);
+    TTraverseOrder.PreOrder: TraversePreOrder(Root, ActionWrapper);
+    TTraverseOrder.InOrder: TraverseInOrder(nil, ActionWrapper);
+    TTraverseOrder.PostOrder: TraversePostOrder(Root, ActionWrapper);
+    TTraverseOrder.ReverseOrder: TraverseReverseOrder(nil, ActionWrapper);
   else raise EInvalidOperationException.CreateRes(@SInvalidTraverseOrder);
   end;
 end;
@@ -1869,28 +2564,6 @@ begin
   Result:= TPair.Create(Key, Value);
 end;
 
-procedure TBinaryTreeBase<K, V>.Traverse(Order: TraverseOrder; const Action: TTraverseAction);
-var
-  ActionWrapper: TNodePredicate;
-begin
-  Assert(Assigned(Action));
-  ActionWrapper:= function(const Node: PNode): boolean
-    var
-      Abort: boolean;
-    begin
-      Abort:= false;
-      Action(Node.Key.Key, Node.Key.Value, Abort);
-      Result:= Abort;
-    end;
-
-  case Order of
-    TraverseOrder.PreOrder: TraversePreOrder(Root, ActionWrapper);
-    TraverseOrder.InOrder: TraverseInOrder(Root, ActionWrapper);
-    TraverseOrder.PostOrder: TraversePostOrder(Root, ActionWrapper);
-    TraverseOrder.ReverseOrder: TraverseReverseOrder(Root, ActionWrapper);
-  else raise EInvalidOperationException.CreateRes(@SInvalidTraverseOrder);
-  end;
-end;
 
 { TAVLTree<T>.TAVLNodeHelper }
 
