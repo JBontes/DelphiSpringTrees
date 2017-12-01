@@ -1282,7 +1282,7 @@ var
   {$ifopt C+} ColorDiff: boolean; {$endif}
 begin
   Dec(fCount);
-  if IsManagedType(T) then Finalize(Node.fKey);
+  Finalize(Node.fKey);
   Cur := Node;
   Child := Node;
 
