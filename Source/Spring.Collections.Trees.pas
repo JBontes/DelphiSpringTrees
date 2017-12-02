@@ -46,110 +46,110 @@ type
 
   Tree<T> = record
   public
-    class function RedBlackTree(Species: TTreeSpecies = TD234): ITree<T>; overload; static;
-    class function RedBlackTree(const Comparer: IComparer<T>; Species: TTreeSpecies = TD234): ITree<T>; overload; static;
-    class function RedBlackTree(const Comparer: TComparison<T>; Species: TTreeSpecies = TD234): ITree<T>; overload; static;
-    class function RedBlackTree(const Values: array of T; Species: TTreeSpecies = TD234): ITree<T>; overload; static;
-    class function RedBlackTree(const Collection: IEnumerable<T>; Species: TTreeSpecies = TD234): ITree<T>; overload; static;
+    class function RedBlackTree: ITree<T>; overload; static;
+    class function RedBlackTree(const Comparer: IComparer<T>): ITree<T>; overload; static;
+    class function RedBlackTree(const Comparer: TComparison<T>): ITree<T>; overload; static;
+    class function RedBlackTree(const Values: array of T): ITree<T>; overload; static;
+    class function RedBlackTree(const Collection: IEnumerable<T>): ITree<T>; overload; static;
   end;
 
   Tree<K,V> = record
   public
-    class function RedBlackTree(Species: TTreeSpecies = TD234): ITree<K,V>; overload; static;
-    class function RedBlackTree(const Comparer: IComparer<K>; Species: TTreeSpecies = TD234): ITree<K,V>; overload; static;
-    class function RedBlackTree(const Comparer: TComparison<K>; Species: TTreeSpecies = TD234): ITree<K,V>; overload; static;
-    class function RedBlackTree(const Values: array of TPair<K,V>; Species: TTreeSpecies = TD234): ITree<K,V>; overload; static;
-    class function RedBlackTree(const Collection: IEnumerable<TPair<K,V>>; Species: TTreeSpecies = TD234): ITree<K,V>; overload; static;
-    class function BPlusTree: ITree<K,V>; overload; static;
-    class function BPlusTree(const Comparer: IComparer<K>): ITree<K,V>; overload; static;
-    class function BPlusTree(const Comparer: TComparison<K>): ITree<K,V>; overload; static;
-    class function BPlusTree(const Values: array of TPair<K,V>): ITree<K,V>; overload; static;
-    class function BPlusTree(const Collection: IEnumerable<TPair<K,V>>): ITree<K,V>; overload; static;
+    class function RedBlackTree: ITree<K,V>; overload; static;
+    class function RedBlackTree(const Comparer: IComparer<K>): ITree<K,V>; overload; static;
+    class function RedBlackTree(const Comparer: TComparison<K>): ITree<K,V>; overload; static;
+    class function RedBlackTree(const Values: array of TPair<K,V>): ITree<K,V>; overload; static;
+    class function RedBlackTree(const Collection: IEnumerable<TPair<K,V>>): ITree<K,V>; overload; static;
+//    class function BPlusTree: ITree<K,V>; overload; static;
+//    class function BPlusTree(const Comparer: IComparer<K>): ITree<K,V>; overload; static;
+//    class function BPlusTree(const Comparer: TComparison<K>): ITree<K,V>; overload; static;
+//    class function BPlusTree(const Values: array of TPair<K,V>): ITree<K,V>; overload; static;
+//    class function BPlusTree(const Collection: IEnumerable<TPair<K,V>>): ITree<K,V>; overload; static;
   end;
 
 implementation
 
 uses
-  Spring.Collections.TreeImpl,
-  Spring.Collections.BPlusTrees;
+  Spring.Collections.TreeImpl{,
+  Spring.Collections.BPlusTrees};
 
 { Tree<T> }
 
-class function Tree<T>.RedBlackTree(const Comparer: IComparer<T>; Species: TTreeSpecies): ITree<T>;
+class function Tree<T>.RedBlackTree(const Comparer: IComparer<T>): ITree<T>;
 begin
-  Result:= TRedBlackTree<T>.Create(Comparer, Species);
+  Result:= TRedBlackTree<T>.Create(Comparer);
 end;
 
-class function Tree<T>.RedBlackTree(Species: TTreeSpecies): ITree<T>;
+class function Tree<T>.RedBlackTree: ITree<T>;
 begin
-  Result:= TRedBlackTree<T>.Create(Species);
+  Result:= TRedBlackTree<T>.Create;
 end;
 
-class function Tree<T>.RedBlackTree(const Comparer: TComparison<T>; Species: TTreeSpecies): ITree<T>;
+class function Tree<T>.RedBlackTree(const Comparer: TComparison<T>): ITree<T>;
 begin
-  Result:= TRedBlackTree<T>.Create(Comparer, Species);
+  Result:= TRedBlackTree<T>.Create(Comparer);
 end;
 
-class function Tree<T>.RedBlackTree(const Collection: IEnumerable<T>; Species: TTreeSpecies): ITree<T>;
+class function Tree<T>.RedBlackTree(const Collection: IEnumerable<T>): ITree<T>;
 begin
-  Result:= TRedBlackTree<T>.Create(Collection, Species);
+  Result:= TRedBlackTree<T>.Create(Collection);
 end;
 
-class function Tree<T>.RedBlackTree(const Values: array of T; Species: TTreeSpecies): ITree<T>;
+class function Tree<T>.RedBlackTree(const Values: array of T): ITree<T>;
 begin
-  Result:= TRedBlackTree<T>.Create(Values, Species);
+  Result:= TRedBlackTree<T>.Create(Values);
 end;
 
 { Tree<K, V> }
 
-class function Tree<K, V>.RedBlackTree(const Comparer: IComparer<K>; Species: TTreeSpecies): ITree<K, V>;
+class function Tree<K, V>.RedBlackTree(const Comparer: IComparer<K>): ITree<K, V>;
 begin
-  Result:= TRedBlackTree<K,V>.Create(Comparer, Species);
+  Result:= TRedBlackTree<K,V>.Create(Comparer);
 end;
 
-class function Tree<K, V>.RedBlackTree(Species: TTreeSpecies): ITree<K, V>;
+class function Tree<K, V>.RedBlackTree: ITree<K, V>;
 begin
-  Result:= TRedBlackTree<K,V>.Create(Species);
+  Result:= TRedBlackTree<K,V>.Create;
 end;
 
-class function Tree<K, V>.BPlusTree(const Comparer: IComparer<K>): ITree<K, V>;
+//class function Tree<K, V>.BPlusTree(const Comparer: IComparer<K>): ITree<K, V>;
+//begin
+//  Result:= TBPlusTree<K,V>.Create(Comparer);
+//end;
+//
+//class function Tree<K, V>.BPlusTree: ITree<K, V>;
+//begin
+//  Result:= TBPlusTree<K,V>.Create;
+//end;
+//
+//class function Tree<K, V>.BPlusTree(const Comparer: TComparison<K>): ITree<K, V>;
+//begin
+//
+//end;
+//
+//class function Tree<K, V>.BPlusTree(const Collection: IEnumerable < TPair < K, V >> ): ITree<K, V>;
+//begin
+//
+//end;
+//
+//class function Tree<K, V>.BPlusTree(const Values: array of TPair<K, V>): ITree<K, V>;
+//begin
+//
+//end;
+
+class function Tree<K, V>.RedBlackTree(const Collection: IEnumerable<TPair<K, V>>): ITree<K, V>;
 begin
-  Result:= TBPlusTree<K,V>.Create(Comparer);
+  Result:= TRedBlackTree<K,V>.Create(Collection);
 end;
 
-class function Tree<K, V>.BPlusTree: ITree<K, V>;
+class function Tree<K, V>.RedBlackTree(const Values: array of TPair<K, V>): ITree<K, V>;
 begin
-  Result:= TBPlusTree<K,V>.Create;
+  Result:= TRedBlackTree<K,V>.Create(Values);
 end;
 
-class function Tree<K, V>.BPlusTree(const Comparer: TComparison<K>): ITree<K, V>;
+class function Tree<K, V>.RedBlackTree(const Comparer: TComparison<K>): ITree<K, V>;
 begin
-
-end;
-
-class function Tree<K, V>.BPlusTree(const Collection: IEnumerable < TPair < K, V >> ): ITree<K, V>;
-begin
-
-end;
-
-class function Tree<K, V>.BPlusTree(const Values: array of TPair<K, V>): ITree<K, V>;
-begin
-
-end;
-
-class function Tree<K, V>.RedBlackTree(const Collection: IEnumerable<TPair<K, V>>; Species: TTreeSpecies): ITree<K, V>;
-begin
-  Result:= TRedBlackTree<K,V>.Create(Collection, Species);
-end;
-
-class function Tree<K, V>.RedBlackTree(const Values: array of TPair<K, V>; Species: TTreeSpecies): ITree<K, V>;
-begin
-  Result:= TRedBlackTree<K,V>.Create(Values, Species);
-end;
-
-class function Tree<K, V>.RedBlackTree(const Comparer: TComparison<K>; Species: TTreeSpecies): ITree<K, V>;
-begin
-  Result:= TRedBlackTree<K,V>.Create(Comparer, Species);
+  Result:= TRedBlackTree<K,V>.Create(Comparer);
 end;
 
 end.
