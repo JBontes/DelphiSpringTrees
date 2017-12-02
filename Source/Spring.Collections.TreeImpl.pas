@@ -234,7 +234,7 @@ type
       fLeft: PNode; // Left nodes hold lower values
       fRight: PNode; // Right nodes hold higher values
       fKey: T; // The payload, use a TPair<K,V> to store a Key/Value pair.
-    public //Allow fIsBlack to be repurposed
+    public //Allow fIsBlack to be repurposed (e.g. as the balance field in an AVLTree).
       fIsBlack: Boolean; // Red is the default.
     private
       /// <summary>
@@ -244,21 +244,6 @@ type
       /// </summary>
       /// <returns> false if self is nil; true is the Node is red, false otherwise</returns>
       function IsRed: boolean; inline;
-      /// <summary>
-      /// Update the Left node and set the correct parent as well.
-      /// A nil Value is allowed.
-      /// </summary>
-      procedure SetLeft(const Value: PNode); inline;
-      /// <summary>
-      /// Update the Right node and set the correct parent as well.
-      /// A nil Value is allowed.
-      /// </summary>
-      procedure SetRight(const Value: PNode); inline;
-      /// <summary>
-      /// Only call SetParent in Tree.NewNode!
-      /// Everywhere else SetLeft/SetRight will set the correct parent.
-      /// </summary>
-      procedure SetParent(const Value: PNode); inline;
       function Uncle: PNode;
       property NodeColor: Boolean read fIsBlack write fIsBlack;
     public
@@ -283,7 +268,6 @@ type
       constructor Create(const Tree: TBinaryTreeBase<T>; Direction: TDirection); overload;
       constructor Create(const Tree: TBinaryTreeBase<T>); overload;
     public
-      destructor Destroy; override;
       procedure Reset; override;
       function MoveNext: boolean; override;
       // function GetEnumerator: IEnumerator<T>; override;
@@ -293,9 +277,6 @@ type
     end;
   private type
     TNodePredicate = TPredicate<PNode>;
-  strict private
-    // Disable the default constructor.
-    constructor Create; override;
   protected type
     TBucketIndex = TPair<NativeUInt, NativeUInt>;
   protected
@@ -361,6 +342,7 @@ type
 
     property Root: PNode read fRoot write SetRoot;
   public
+    destructor Destroy; override;
     function Add(const Item: T): boolean; override;
     function Contains(const Key: T): boolean; override;
     procedure Clear; override;
@@ -410,9 +392,6 @@ type
     ///
     /// Can lead to duplicate keys in the tree if not called with the Root as the Head</remarks>
     function InternalInsert(Head: PNode; const Key: K; const Value: V): PNode; reintroduce; overload; virtual;
-  protected
-    constructor Create; override;
-    destructor Destroy; override;
   public
     function Add(const Key: TPair<K, V>): boolean; overload; override;
     procedure Add(const Key: K; const Value: V); reintroduce; overload; virtual;
@@ -558,7 +537,6 @@ type
     constructor Create(const Comparer: TComparison<T>); reintroduce; overload;
     constructor Create(const Values: array of T); reintroduce; overload;
     constructor Create(const Collection: IEnumerable<T>); reintroduce; overload;
-    destructor Destroy; override;
   public
     function GetEnumerator: IEnumerator<T>; override;
     function Reversed: IEnumerable<T>; override;
@@ -798,28 +776,11 @@ type
     Black = true;
   end;
 
-procedure TBinaryTreeBase<T>.TNode.SetLeft(const Value: PNode);
-begin
-  fLeft:= Value;
-  if Assigned(Value) then Value.fParent:= @Self;
-end;
-
-procedure TBinaryTreeBase<T>.TNode.SetParent(const Value: PNode);
-begin
-  fParent:= Value;
-end;
-
-procedure TBinaryTreeBase<T>.TNode.SetRight(const Value: PNode);
-begin
-  fRight:= Value;
-  if Assigned(Value) then Value.fParent:= @Self;
-end;
-
 procedure TBinaryTreeBase<T>.SetRoot(const Value: PNode);
 begin
   fRoot := Value;
   if (Assigned(Value)) then begin
-    fRoot.SetParent(nil);
+    fRoot.Parent := nil;
     fRoot.NodeColor:= Color.Black;
   end;
 end;
@@ -1447,9 +1408,10 @@ begin
   Result:= Assigned(FindNode(Root, Key));
 end;
 
-constructor TBinaryTreeBase<T>.Create;
+destructor TBinaryTreeBase<T>.Destroy;
 begin
-  inherited Create;
+  Clear;
+  inherited;
 end;
 
 function TRedBlackTree<T>.Get(const Key: T): T;
@@ -1503,10 +1465,10 @@ begin
   Current:= NewNode(Key, Parent);
   if (Compare > 0) then begin
     Current.Right:= Parent.Right;
-    Parent.fRight:= Current;
+    Parent.Right:= Current;
   end else begin
     Current.Left:= Parent.Left;
-    Parent.fLeft:= Current;
+    Parent.Left:= Current;
   end;
   Result:= Current;
 
@@ -1638,12 +1600,6 @@ end;
 //  Head.Left:= DeleteMin(Head.Left);
 //  Result:= FixUp(Head);
 //end;
-
-destructor TRedBlackTree<T>.Destroy;
-begin
-  Clear;
-  inherited Destroy;
-end;
 
 //function TRedBlackTree<T>.DeleteMax(Head: PNode): PNode;
 //begin
@@ -2050,11 +2006,6 @@ begin
   Create(Tree, FromBeginning);
 end;
 
-destructor TBinaryTreeBase<T>.TTreeEnumerator.Destroy;
-begin
-  inherited;
-end;
-
 function TBinaryTreeBase<T>.TTreeEnumerator.MoveNext: boolean;
 begin
   if (fCurrentNode = nil) then begin
@@ -2317,16 +2268,6 @@ end;
 
 { TNAryTree<K, V> }
 
-constructor TNAryTree<K, V>.Create;
-begin
-  inherited;
-end;
-
-destructor TNAryTree<K, V>.Destroy;
-begin
-  inherited;
-end;
-
 // Todo: implement addition code.
 function TNAryTree<K, V>.Add(const Key: TPair<K, V>): boolean;
 begin
@@ -2388,10 +2329,10 @@ begin
   Current:= NewNode(KVPair, Parent);
   if (Compare > 0) then begin
     Current.Right:= Parent.Right;
-    Parent.fRight:= Current;
+    Parent.Right:= Current;
   end else begin
     Current.Left:= Parent.Left;
-    Parent.fLeft:= Current;
+    Parent.Left:= Current;
   end;
   Result:= Current;
 end;
@@ -2504,9 +2445,9 @@ begin
   // The Key is the index of the bucket, which will also will be correct
   // when we just added a bucket.
   Result:= @fStorage[index.Key, index.Value];
-  Result.fLeft:= nil;
-  Result.fRight:= nil;
-  Result.SetParent(Parent);
+  Result.Parent:= Parent;
+  Result.Left:= nil;
+  Result.Right:= nil;
   Result.fKey:= Key;
   Result.fIsBlack:= Color.Red;
   Inc(fCount);
