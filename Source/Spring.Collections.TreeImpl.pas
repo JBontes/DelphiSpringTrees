@@ -460,12 +460,6 @@ type
     TNode = TBinaryTreeBase<T>.TNode;
     TNodePredicate = TBinaryTreeBase<T>.TNodePredicate;
   private
-    // A RedBlack tree emulates a binary 234 tree.
-    // This tree can run in 234 and 23 mode.
-    // For some problem domains the 23 runs faster than the 234
-    // For Other problems the 234 is faster.
-    fSpecies: TTreeSpecies;
-  private
     /// <summary>
     /// Deletes the rightmost child of Start Node, retaining the RedBlack property
     /// </summary>
@@ -559,11 +553,11 @@ type
     function VerifyRedBlack(const Node: PNode): Boolean;
     function VerifyTree: Boolean;
   protected
-    constructor Create(Species: TTreeSpecies = TD234); reintroduce; overload;
-    constructor Create(const Comparer: IComparer<T>; Species: TTreeSpecies = TD234); reintroduce; overload;
-    constructor Create(const Comparer: TComparison<T>; Species: TTreeSpecies = TD234); reintroduce; overload;
-    constructor Create(const Values: array of T; Species: TTreeSpecies = TD234); reintroduce; overload;
-    constructor Create(const Collection: IEnumerable<T>; Species: TTreeSpecies = TD234); reintroduce; overload;
+    constructor Create; reintroduce; overload;
+    constructor Create(const Comparer: IComparer<T>); reintroduce; overload;
+    constructor Create(const Comparer: TComparison<T>); reintroduce; overload;
+    constructor Create(const Values: array of T); reintroduce; overload;
+    constructor Create(const Collection: IEnumerable<T>); reintroduce; overload;
     destructor Destroy; override;
   public
     function GetEnumerator: IEnumerator<T>; override;
@@ -615,11 +609,11 @@ type
   public type
     TTraverseAction = reference to procedure(const Key: K; const Value: V; var Abort: boolean);
   protected
-    constructor Create(Species: TTreeSpecies = TD234); reintroduce; overload;
-    constructor Create(const Comparer: IComparer<K>; Species: TTreeSpecies = TD234); reintroduce; overload;
-    constructor Create(const Comparer: TComparison<K>; Species: TTreeSpecies = TD234); reintroduce; overload;
-    constructor Create(const Collection: IEnumerable<TPair<K, V>>; Species: TTreeSpecies); reintroduce; overload;
-    constructor Create(const Values: array of TPair<K, V>; Species: TTreeSpecies); reintroduce; overload;
+    constructor Create; reintroduce; overload;
+    constructor Create(const Comparer: IComparer<K>); reintroduce; overload;
+    constructor Create(const Comparer: TComparison<K>); reintroduce; overload;
+    constructor Create(const Collection: IEnumerable<TPair<K, V>>); reintroduce; overload;
+    constructor Create(const Values: array of TPair<K, V>); reintroduce; overload;
   public
 
     /// <summary>
@@ -836,33 +830,30 @@ begin
   Result.Value:= index mod NativeUInt(cBucketSize);
 end;
 
-constructor TRedBlackTree<T>.Create(Species: TTreeSpecies = TD234);
+constructor TRedBlackTree<T>.Create;
 begin
   inherited Create;
-  fSpecies:= Species;
 end;
 
-constructor TRedBlackTree<T>.Create(const Comparer: TComparison<T>; Species: TTreeSpecies = TD234);
+constructor TRedBlackTree<T>.Create(const Comparer: TComparison<T>);
 begin
   inherited Create(Comparer);
-  fSpecies:= Species;
 end;
 
-constructor TRedBlackTree<T>.Create(const Comparer: IComparer<T>; Species: TTreeSpecies = TD234);
+constructor TRedBlackTree<T>.Create(const Comparer: IComparer<T>);
 begin
   inherited Create(Comparer);
-  fSpecies:= Species;
 end;
 
-constructor TRedBlackTree<T>.Create(const Collection: IEnumerable<T>; Species: TTreeSpecies = TD234);
+constructor TRedBlackTree<T>.Create(const Collection: IEnumerable<T>);
 begin
-  Create(Species);
+  Create;
   AddRange(Collection);
 end;
 
-constructor TRedBlackTree<T>.Create(const Values: array of T; Species: TTreeSpecies = TD234);
+constructor TRedBlackTree<T>.Create(const Values: array of T);
 begin
-  Create(Species);
+  Create;
   AddRange(Values);
 end;
 
@@ -1280,6 +1271,8 @@ var
   RightChild: PNode;
   DeletedLeft: Boolean;
   {$ifopt C+} ColorDiff: boolean; {$endif}
+label
+  DeleteNode;  //Instead of a exit + try finally we use a goto(exitpoint)
 begin
   Dec(fCount);
   Finalize(Node.fKey);
@@ -1302,7 +1295,7 @@ begin
   if (Child <> Node) then begin
     {$ifopt c+} ColorDiff:= Node.NodeColor <> Child.NodeColor; {$endif}
     Self.rbSwapNodes(Node, Child, false);
-    Assert(ColorDiff = (Node.NodeColor <> Child.NodeColor)); //Make sure color is not lost
+    Assert(ColorDiff = (Node.NodeColor <> Child.NodeColor)); //Make sure color-counts are preserved
   end;
   // Now, Node is a pseudo-leaf with the color of Child.
 
@@ -1317,7 +1310,7 @@ begin
     RightChild.NodeColor := Color.Black;
     RightChild.Right := nil; // Self stored the Node to be deleted…
 
-    Exit; // no fixup necessary
+    goto DeleteNode; // no fixup necessary
   end;
 
   // Node has no Children, so we have to just delete it, which is no problem if we are red. Otherwise, we must start a fixup at the Parent.
@@ -1328,12 +1321,14 @@ begin
 
   end else begin
     Root := nil; // Tree is now empty!
-    Exit; // No fixup needed!
+    goto DeleteNode; // No fixup needed!
   end;
 
   if (Node.NodeColor = Color.Black) then begin
     rbFixupAfterDelete(Node.Parent, DeletedLeft);
   end;
+DeleteNode:
+  FreeSingleNode(Node);
 end;
 
 procedure TRedBlackTree<T>.rbFixupAfterDelete(Parent: PNode; DeletedLeft: Boolean);
@@ -1891,6 +1886,7 @@ end;
 procedure TBinaryTreeBase<T>.FreeSingleNode(const Node: PNode);
 var
   Index: TBucketIndex;
+  LastNode: PNode;
 begin
   Assert(Assigned(Node));
   if Assigned(Node.Parent) then begin
@@ -1899,8 +1895,15 @@ begin
   end;
   if (fCount > 1) then begin
     index:= BucketIndex(fCount-1);
-    Move(fStorage[index.Key, index.Value], Node^, SizeOf(TNode));
+    LastNode:= @fStorage[index.Key, index.Value];
+    Move(LastNode^, Node^, SizeOf(TNode));
   end;
+  //After the move node now points to the new node
+  //Fix up the anything that points to the new node.
+  if (Node.Parent.Left = LastNode) then Node.Parent.Left:= Node
+  else Node.Parent.Right:= Node;
+  if Assigned(Node.Left) then Node.Left.Parent:= Node;
+  if Assigned(Node.Right) then Node.Right.Parent:= Node;
   Dec(fCount);
 end;
 
@@ -2080,38 +2083,38 @@ end;
 
 { TRedBlackTree<K, V> }
 
-constructor TRedBlackTree<K, V>.Create(const Comparer: IComparer<K>; Species: TTreeSpecies);
+constructor TRedBlackTree<K, V>.Create(const Comparer: IComparer<K>);
 begin
   fKeyComparer:= TTreeComparer.Create(Comparer);
-  inherited Create(fKeyComparer, Species);
+  inherited Create(fKeyComparer);
   fValueComparer:= TComparer<V>.Default;
   fOnKeyChanged:= TCollectionChangedEventImpl<K>.Create;
   fOnValueChanged:= TCollectionChangedEventImpl<V>.Create;
 end;
 
-constructor TRedBlackTree<K, V>.Create(Species: TTreeSpecies);
+constructor TRedBlackTree<K, V>.Create;
 begin
-  Create(TComparer<K>.Default, Species);
+  Create(TComparer<K>.Default);
 end;
 
-constructor TRedBlackTree<K, V>.Create(const Comparer: TComparison<K>; Species: TTreeSpecies);
+constructor TRedBlackTree<K, V>.Create(const Comparer: TComparison<K>);
 begin
-  Create(IComparer<K>(PPointer(@Comparer)^), Species);
+  Create(IComparer<K>(PPointer(@Comparer)^));
 end;
 
-constructor TRedBlackTree<K, V>.Create(const Collection: IEnumerable<TPair<K, V>>; Species: TTreeSpecies);
+constructor TRedBlackTree<K, V>.Create(const Collection: IEnumerable<TPair<K, V>>);
 var
   Item: TPair;
 begin
-  Create(Species);
+  Create;
   for Item in Collection do Self.Add(Item.Key, Item.Value);
 end;
 
-constructor TRedBlackTree<K, V>.Create(const Values: array of TPair<K, V>; Species: TTreeSpecies);
+constructor TRedBlackTree<K, V>.Create(const Values: array of TPair<K, V>);
 var
   Item: TPair;
 begin
-  Create(Species);
+  Create;
   for Item in Values do Self.Add(Item.Key, Item.Value);
 end;
 
