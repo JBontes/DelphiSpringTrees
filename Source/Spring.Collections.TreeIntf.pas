@@ -25,6 +25,7 @@ type
   ITreeDebug = interface
     ['{2E25C3A0-C381-4383-9060-7EC13C0E1C42}']
     function VerifyIntegrity: Boolean;
+    function StorageSizeOK: Boolean;
   end;
   {$endif}
 
