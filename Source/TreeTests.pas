@@ -195,7 +195,7 @@ end;
 
 procedure TestTreesInteger.SpeedTest(Count: Integer);
 var
-  i,r,a,c: integer;
+  i,r,a: integer;
   Data: TArray<integer>;
   Ticks: cardinal;
 begin
@@ -300,7 +300,7 @@ end;
 
 procedure TestTreesIntInt.RandomAddDelete(Count: Integer);
 var
-  i,r,a,c: integer;
+  i,j,r,a,c: integer;
   Data: TArray<integer>;
 begin
   SetLength(Data, Count);
@@ -322,6 +322,10 @@ begin
     c:= FTree.Count;
     FTree.Remove(Data[i]);
     Assert.IsTrue(FTree.Count = (c-1));
+    Assert.IsFalse(FTree.ContainsKey(Data[i]));
+    for j:= i+1 to Count -1 do begin
+      Assert.IsTrue(FTree.ContainsKey(Data[j]));
+    end;
     Assert.IsTrue((fTree as ITreeDebug).VerifyIntegrity);
   end;
   Assert.IsTrue(FTree.Count = 0);
