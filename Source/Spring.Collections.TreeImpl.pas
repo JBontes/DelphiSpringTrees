@@ -74,7 +74,7 @@ type
   protected
     fCount: Integer;
     procedure AddInternal(const Item: T); override;
-    function GetCount: Integer;
+    function GetCount: Integer; reintroduce;
   public
 
     /// <summary>
@@ -767,6 +767,9 @@ resourcestring
 implementation
 
 uses
+  {$if CompilerVersion < 28.0} //prior to XE7
+  System.TypInfo,
+  {$endif}
   Spring.ResourceStrings,
   Spring.Collections.Lists,
   Spring.Collections.Events;
@@ -1238,7 +1241,6 @@ var
 label
   DeleteNode;  //Instead of a exit + try finally we use a goto(exitpoint)
 begin
-  Finalize(Node.fKey);
   Cur := Node;
   Child := Node;
 
@@ -1427,7 +1429,7 @@ end;
 
 function TBinaryTreeBase<T>.Add(const Item: T): boolean;
 var
-  OldCount: NativeUInt;
+  OldCount: Integer;
 begin
   OldCount:= Count;
   Root:= Self.InternalInsert(Root, Item);
@@ -1852,8 +1854,10 @@ var
   Index: TBucketIndex;
   LastNode: PNode;
 begin
+  {TODO -oJB -cTBinaryTreeBase<T>.FreeSingleNode : Lock in MultiThreading mode}
   Assert(Assigned(Node));
   Dec(fCount);
+  if not(HasWeakRef(T)) then Finalize(Node.fKey);
   if (fCount > 0) then begin
     index:= BucketIndex(fCount);
     Assert((Index.Key + Index.Value) > 0);
@@ -1869,7 +1873,20 @@ begin
     end;
     if Assigned(LastNode.Left) then LastNode.Left.Parent:= Node;
     if Assigned(LastNode.Right) then LastNode.Right.Parent:= Node;
-    Move(LastNode^, Node^, SizeOf(TNode));
+    {$if CompilerVersion >= 28.0} //XE7 or higher
+    if (HasWeakRef(T)) then begin
+    {$else}
+    if System.TypInfo.HasWeakRef(TypeInfo(T)) then begin
+    {$endif}
+      Node.Parent:= LastNode.Parent;
+      Node.fLeft:= LastNode.fLeft;
+      Node.fRight:= LastNode.fRight;
+      Node.fIsBlack:= LastNode.fIsBlack;
+      Node.fKey:= LastNode.fKey;  //Node.fKey is destroyed here.
+      Finalize(LastNode.fKey);    //Release LastNode.fKey, otherwise the refcount will be off by one.
+    end else begin
+      Move(LastNode^, Node^, SizeOf(TNode));
+    end;
     if (Index.Value = 0) then begin
       SetLength(fStorage[index.Key],0);
       SetLength(fStorage, Index.Key);
