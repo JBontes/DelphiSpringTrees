@@ -54,6 +54,7 @@ interface
 
 uses
   System.Types,
+  System.SysUtils,
   System.Generics.Collections,
   System.Generics.Defaults,
   Spring,
@@ -67,11 +68,13 @@ type
   /// <summary>
   /// Abstract parent for tree, defines the tree as a set of keys
   /// </summary>
-  TTree<T> = class abstract(TCollectionBase<T>, ISet<T>, ITree<T>)
+  TTree<T> = class abstract(TCollectionBase<T>, ISet<T>, ITree<T>, IEnumerable<T>)
   private
     procedure ArgumentNilError(const MethodName: string); virtual;
   protected
+    fCount: Integer;
     procedure AddInternal(const Item: T); override;
+    function GetCount: Integer;
   public
 
     /// <summary>
@@ -292,7 +295,6 @@ type
     procedure FreeSingleNode(const Node: PNode);
   private
     fRoot: PNode;
-    fCount: Integer;
     procedure SetRoot(const Value: PNode); inline;
     procedure TraversePreOrder(const Node: PNode; Action: TNodePredicate);
     procedure TraversePostOrder(const Node: PNode; Action: TNodePredicate);
@@ -531,6 +533,7 @@ type
     function VerifyOrder: Boolean;
     function VerifyRedBlack(const Node: PNode): Boolean;
     function VerifyTree: Boolean;
+    function StorageSizeOK: Boolean;
   protected
     constructor Create; reintroduce; overload;
     constructor Create(const Comparer: IComparer<T>); reintroduce; overload;
@@ -1235,7 +1238,6 @@ var
 label
   DeleteNode;  //Instead of a exit + try finally we use a goto(exitpoint)
 begin
-  Dec(fCount);
   Finalize(Node.fKey);
   Cur := Node;
   Child := Node;
@@ -1425,7 +1427,7 @@ end;
 
 function TBinaryTreeBase<T>.Add(const Item: T): boolean;
 var
-  OldCount: Integer;
+  OldCount: NativeUInt;
 begin
   OldCount:= Count;
   Root:= Self.InternalInsert(Root, Item);
@@ -1640,6 +1642,12 @@ begin
   Result:= TTreeEnumerator.Create(Self, FromEnd);
 end;
 
+
+function TRedBlackTree<T>.StorageSizeOK: Boolean;
+begin
+  Result:= ((Count+cBucketSize-1) div cBucketSize) = Length(fStorage);
+end;
+
 //function TRedBlackTree<T>.DeleteNode(Head: PNode; Key: T): PNode;
 //begin
 //  Assert(Assigned(Head));
@@ -1845,22 +1853,28 @@ var
   LastNode: PNode;
 begin
   Assert(Assigned(Node));
-  if Assigned(Node.Parent) then begin
-    if (Node.Parent.Left = Node) then Node.Parent.Left:= nil
-    else Node.Parent.Right:= nil;
-  end;
-  if (fCount > 1) then begin
-    index:= BucketIndex(fCount-1);
-    LastNode:= @fStorage[index.Key, index.Value];
-    Move(LastNode^, Node^, SizeOf(TNode));
-  end;
-  //After the move node now points to the new node
-  //Fix up the anything that points to the new node.
-  if (Node.Parent.Left = LastNode) then Node.Parent.Left:= Node
-  else Node.Parent.Right:= Node;
-  if Assigned(Node.Left) then Node.Left.Parent:= Node;
-  if Assigned(Node.Right) then Node.Right.Parent:= Node;
   Dec(fCount);
+  if (fCount > 0) then begin
+    index:= BucketIndex(fCount);
+    Assert((Index.Key + Index.Value) > 0);
+    LastNode:= @fStorage[index.Key, index.Value];
+    //After the move node now points to the new node
+    //Fix up the anything that points to the new node.
+    if (Node = LastNode) then Exit;
+    if (Assigned(LastNode.Parent)) then begin
+      if (LastNode.Parent.Left = LastNode) then LastNode.Parent.Left:= Node
+      else LastNode.Parent.Right:= Node;
+    end else begin
+      fRoot:= Node;
+    end;
+    if Assigned(LastNode.Left) then LastNode.Left.Parent:= Node;
+    if Assigned(LastNode.Right) then LastNode.Right.Parent:= Node;
+    Move(LastNode^, Node^, SizeOf(TNode));
+    if (Index.Value = 0) then begin
+      SetLength(fStorage[index.Key],0);
+      SetLength(fStorage, Index.Key);
+    end;
+  end;
 end;
 
 function TBinaryTreeBase<T>.NextNode(const Node: PNode): PNode;
@@ -2363,6 +2377,11 @@ begin
   end;
 end;
 
+function TTree<T>.GetCount: Integer;
+begin
+  Result:= fCount;
+end;
+
 procedure TTree<T>.IntersectWith(const Other: IEnumerable<T>);
 var
   Element: T;
@@ -2436,7 +2455,7 @@ var
   Index: TBucketIndex;
 begin
   index:= BucketIndex(fCount);
-  if (index.Value = 0) then begin
+  if (Index.Value = 0) then begin
     // we do not test for Out of Memory. If it occurs here that's fine.
     ExpandStorage(fCount);
   end;
